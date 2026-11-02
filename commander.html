@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Commander — Sarah Traiteur by L'Italiano</title>
+  <meta name="description" content="Passez votre commande chez Sarah Traiteur, retrait à Épinay-sur-Seine ou livraison.">
+  <link rel="icon" href="images/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="commander">
+  <div id="entete"></div>
+
+  <main class="conteneur">
+    <div class="page-titre">
+      <span class="surtitre">Dernière étape</span>
+      <h2>Votre commande</h2>
+      <p>Commande avant le <strong id="limite">mercredi 20h</strong> pour le vendredi. Retrait à <span id="adresse"></span> ou livraison.</p>
+    </div>
+
+    <div class="commande">
+      <form class="carte-blanche" id="formulaire">
+        <h2>Vos coordonnées</h2>
+        <p class="petit" style="margin:-6px 0 14px"><span class="oblig">*</span> champ obligatoire</p>
+        <div class="champ">
+          <label for="nom">Nom et prénom <span class="oblig">*</span></label>
+          <input id="nom" name="nom" required autocomplete="name">
+        </div>
+        <div class="champ">
+          <label for="telephone">Numéro de téléphone <span class="oblig">*</span></label>
+          <input id="telephone" name="telephone" type="tel" inputmode="tel" required autocomplete="tel" placeholder="06 12 34 56 78"
+                 pattern="^\s*(?:\+33\s?[1-9]|0[1-9])(?:[\s.\-]?\d{2}){4}\s*$"
+                 title="Entrez un numéro à 10 chiffres, par exemple 06 12 34 56 78">
+          <p class="petit" style="margin-top:2px">Obligatoire : pour vous confirmer la commande et vous joindre le jour du retrait ou de la livraison.</p>
+        </div>
+        <fieldset>
+          <legend>Retrait ou livraison</legend>
+          <div class="choix">
+            <label><input type="radio" id="mode-retrait" name="mode" value="Retrait" required checked> Retrait à <span data-ville>Épinay-sur-Seine</span></label>
+            <label id="choix-livraison"><input type="radio" id="mode-livraison" name="mode" value="Livraison"> Livraison</label>
+          </div>
+        </fieldset>
+        <div class="champ" id="bloc-adresse" hidden>
+          <label for="ville">Ville de livraison</label>
+          <select id="ville" name="ville"></select>
+          <p class="petit" id="info-livraison" style="margin-top:4px"></p>
+          <label for="adresse-livraison" style="margin-top:8px">Adresse de livraison</label>
+          <textarea id="adresse-livraison" name="adresse" rows="2" autocomplete="street-address" placeholder="Numéro, rue, code postal"></textarea>
+        </div>
+        <div class="champ">
+          <label for="date">Vendredi de retrait ou de livraison</label>
+          <select id="date" name="date" required></select>
+        </div>
+        <fieldset>
+          <legend>Paiement</legend>
+          <div class="choix">
+            <label><input type="radio" name="paiement" value="Virement" required> Virement</label>
+            <label><input type="radio" name="paiement" value="À la réception"> À la réception</label>
+          </div>
+        </fieldset>
+        <div class="champ">
+          <label for="remarque">Remarque (facultatif)</label>
+          <textarea id="remarque" name="remarque" rows="3" placeholder="Allergie, heure souhaitée…"></textarea>
+        </div>
+        <button class="bouton" type="submit">Envoyer ma commande sur WhatsApp</button>
+        <p class="erreur" id="erreur" role="alert"></p>
+        <p class="petit">Votre commande s'ouvre dans WhatsApp, déjà rédigée : il ne vous reste qu'à l'envoyer. Elle sera confirmée par message.</p>
+        <p class="petit" id="merci" hidden><strong>Merci !</strong> Pensez à appuyer sur « Envoyer » dans WhatsApp.</p>
+      </form>
+
+      <aside class="carte-blanche">
+        <h2>Récapitulatif</h2>
+        <div id="recap"></div>
+      </aside>
+    </div>
+  </main>
+
+  <div id="pied"></div>
+  <script src="donnees.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

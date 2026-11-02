@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sarah Traiteur by L'Italiano — Traiteur casher fait maison</title>
+  <meta name="description" content="Sarah Traiteur by L'Italiano : traiteur casher fait maison. Commandez vos plats avant mercredi 20h, retrait à Épinay-sur-Seine ou livraison.">
+  <link rel="icon" href="images/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="accueil">
+  <div id="entete"></div>
+
+  <main>
+    <section class="heros" aria-label="Bienvenue">
+      <div id="diapos"></div>
+      <div class="heros-contenu">
+        <img class="heros-logo" src="images/logo.png" alt="Sarah Traiteur by L'Italiano">
+        <h1>La cuisine de la maison, pour vos tables de fête</h1>
+        <p>Casher Lameadrine · Viande Rav Katz</p>
+        <div class="actions">
+          <a class="bouton" href="carte.html">Commander</a>
+          <a class="bouton contour" href="#comment">Comment ça marche</a>
+        </div>
+      </div>
+      <div class="points" id="points"></div>
+    </section>
+
+    <section id="comment">
+      <div class="conteneur">
+        <div class="centre">
+          <span class="surtitre">Simple comme bonjour</span>
+          <h2>Comment ça marche</h2>
+          <p class="intro">Composez votre repas en quelques clics, on s'occupe du reste.</p>
+        </div>
+        <div class="etapes">
+          <div class="etape"><span class="num">01</span><h3>Choisissez vos plats</h3><p>Parcourez la carte : entrées, plats, accompagnements et desserts de Shana Pâtisserie.</p></div>
+          <div class="etape"><span class="num">02</span><h3>Commandez à temps</h3><p>Envoyez votre commande avant le <strong data-limite>mercredi 20h</strong> pour le vendredi.</p></div>
+          <div class="etape"><span class="num">03</span><h3>Retrait ou livraison</h3><p>Retrait à Épinay-sur-Seine, ou livraison gratuite dans 10 villes autour (voir la liste en bas de page).</p></div>
+          <div class="etape"><span class="num">04</span><h3>Réglez simplement</h3><p>Paiement par virement, ou à la réception de votre commande.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="bande-brune">
+      <div class="conteneur deux-col">
+        <div>
+          <span class="surtitre">Notre cuisine</span>
+          <h2>Préparé avec soin, comme à la maison</h2>
+          <p>Chez Sarah Traiteur, chaque plat est cuisiné sur commande, avec des produits frais et des recettes de famille. Une cuisine généreuse, pensée pour réunir tout le monde autour de la table.</p>
+          <ul class="engagements">
+            <li data-casher>Cuisine casher — surveillance Lameadrine, viande Rav Katz</li>
+            <li>Desserts signés Shana Pâtisserie, renouvelés régulièrement</li>
+            <li>Tout est fait maison, uniquement sur commande</li>
+          </ul>
+        </div>
+        <div class="cadre-logo"><img src="images/logo.png" alt=""></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="conteneur centre">
+        <span class="surtitre">Prêt pour vendredi</span>
+        <h2>Votre table, sans effort</h2>
+        <div class="chiffres">
+          <div class="chiffre"><strong>Mer. 20h</strong><span>dernier délai de commande</span></div>
+          <div class="chiffre"><strong>100 %</strong><span>fait maison</span></div>
+          <div class="chiffre"><strong>Casher</strong><span>sous surveillance</span></div>
+        </div>
+        <a class="bouton" href="carte.html">Voir la carte</a>
+      </div>
+    </section>
+  </main>
+
+  <div id="pied"></div>
+  <script src="donnees.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

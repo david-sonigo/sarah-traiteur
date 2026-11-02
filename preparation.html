@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Récap préparation — Sarah Traiteur</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="images/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .prep { padding-block: 40px 80px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
+    #resultat { min-width: 0; }
+    .prep h1 { font-family: var(--serif); font-weight: 500; font-size: clamp(2rem, 4.5vw, 2.8rem); color: var(--brun); }
+    .prep .intro-prep { color: var(--texte-doux); max-width: 680px; }
+    .prep textarea { width: 100%; min-height: 220px; font: inherit; font-size: 0.92rem; padding: 14px; border: 1px solid #dccdb4; border-radius: 12px; background: var(--blanc); color: var(--texte); resize: vertical; }
+    .prep textarea:focus { outline: 2px solid var(--or); outline-offset: 1px; }
+    .prep .barre-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .prep .bouton.secondaire { background: transparent; color: var(--brun); border-color: #dccdb4; }
+    .prep .bouton.secondaire:hover { background: var(--creme-2); }
+    .resume { display: flex; gap: 12px; flex-wrap: wrap; }
+    .resume div { background: var(--brun); color: var(--creme); border-radius: 12px; padding: 12px 18px; min-width: 130px; }
+    .resume strong { display: block; font-family: var(--serif); font-size: 2rem; color: var(--or-clair); font-weight: 500; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .resume span { font-size: 0.85rem; }
+    .blocs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 18px; align-items: start; }
+    .bloc { background: var(--blanc); border: 1px solid var(--creme-2); border-radius: var(--rayon); padding: 18px 20px; min-width: 0; break-inside: avoid; }
+    .bloc h2 { font-size: 1.4rem; margin-bottom: 8px; border-bottom: 1px solid var(--creme-2); padding-bottom: 6px; }
+    .bloc ul { list-style: none; display: grid; }
+    .bloc li { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px dashed var(--creme-2); }
+    .bloc li:last-child { border-bottom: 0; }
+    .bloc li b { font-variant-numeric: tabular-nums; color: var(--brun); font-size: 1.1rem; min-width: 2.2em; text-align: right; }
+    .bloc li small { display: block; color: var(--texte-doux); font-size: 0.8rem; }
+    .bloc.autres { border-color: #e6c9a8; background: #fbf0e6; }
+    .clients { width: 100%; border-collapse: collapse; font-size: 0.9rem; background: var(--blanc); border-radius: var(--rayon); overflow: hidden; }
+    .clients th, .clients td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--creme-2); vertical-align: top; }
+    .clients th { background: var(--creme-2); color: var(--brun); font-weight: 600; }
+    .clients td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .tableau { overflow-x: auto; border: 1px solid var(--creme-2); border-radius: var(--rayon); }
+    .vide-prep { color: var(--texte-doux); font-style: italic; }
+    @media print {
+      #entete, #pied, .saisie, .barre-actions, .ne-pas-imprimer { display: none !important; }
+      body { background: #fff; }
+      .bloc { border-color: #999; }
+    }
+  </style>
+</head>
+<body data-page="preparation">
+  <div id="entete"></div>
+
+  <main class="conteneur prep">
+    <div>
+      <span class="surtitre">Réservé à la cuisine</span>
+      <h1>Récap des préparations</h1>
+      <p class="intro-prep">Copiez les messages de commande reçus sur WhatsApp, collez-les tous ici (les uns à la suite des autres), puis cliquez sur « Faire le récap ». Le site additionne tout : vous voyez d'un coup combien de chaque plat préparer.</p>
+    </div>
+
+    <div class="saisie">
+      <label for="messages" class="sr">Messages de commande</label>
+      <textarea id="messages" placeholder="Collez ici toutes les commandes reçues sur WhatsApp…"></textarea>
+    </div>
+    <div class="barre-actions">
+      <button type="button" class="bouton" id="calculer">Faire le récap</button>
+      <button type="button" class="bouton secondaire" id="exemple">Charger un exemple</button>
+      <button type="button" class="bouton secondaire" id="effacer">Tout effacer</button>
+      <button type="button" class="bouton secondaire" id="imprimer" hidden>Imprimer</button>
+    </div>
+
+    <div id="resultat"><p class="vide-prep">Le récap apparaîtra ici.</p></div>
+  </main>
+
+  <div id="pied"></div>
+  <script src="donnees.js"></script>
+  <script src="app.js"></script>
+  <script>
+  (function () {
+    const echapper = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const euros = (n) => n.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+    const plats = CARTE.flatMap((c) => c.plats.map((p) => ({ ...p, cat: c.categorie, ordreCat: CARTE.indexOf(c) })));
+    const parLongueur = [...plats].sort((a, b) => b.nom.length - a.nom.length);
+    const ORDRE_EXTRA = { "Accompagnements des plats": 2.5, "Boissons": 98, "Formules commandées": -1, "Non reconnus": 99 };
+
+    /* Reconnaît « Poulet aux olives + Riz jaune », « Croquant (chocolat) », « Harissa (blé) »… */
+    function reconnaitre(txt) {
+      txt = txt.trim();
+      const p = parLongueur.find((x) => txt.toLowerCase().startsWith(x.nom.toLowerCase()));
+      if (!p) return null;
+      let reste = txt.slice(p.nom.length).trim(), acc = "", variante = "";
+      if (reste.startsWith("+")) acc = reste.slice(1).trim();
+      else { const m = reste.match(/^\((.+)\)$/); if (m) variante = m[1]; }
+      return { p, acc, variante };
+    }
+
+    function analyser(texte) {
+      const blocs = texte.split(/Bonjour,?\s*je souhaite passer commande/i).slice(1);
+      const totaux = new Map();   // cat -> Map(libellé -> {q, ordre})
+      const clients = [];
+      const ajouter = (cat, libelle, q, ordre = 0, ordreCat) => {
+        if (!totaux.has(cat)) totaux.set(cat, { ordreCat: ordreCat ?? ORDRE_EXTRA[cat] ?? 50, lignes: new Map() });
+        const l = totaux.get(cat).lignes;
+        const e = l.get(libelle) || { q: 0, ordre };
+        e.q += q; l.set(libelle, e);
+      };
+      const compterArticle = (txt, q) => {
+        const r = reconnaitre(txt);
+        if (!r) { ajouter("Non reconnus", txt, q); return; }
+        const ordre = plats.indexOf(r.p);
+        ajouter(r.p.cat, r.p.nom + (r.variante ? ` — ${r.variante.toLowerCase()}` : ""), q, ordre, r.p.ordreCat);
+        if (r.acc) {
+          const accPlat = plats.find((x) => x.nom.toLowerCase() === r.acc.toLowerCase());
+          ajouter("Accompagnements des plats", r.acc, q, accPlat ? plats.indexOf(accPlat) : 999);
+        }
+      };
+      const compterInclus = (txt) => {
+        txt.split(",").forEach((morceau) => {
+          const m = morceau.trim().match(/^(\d+)\s+(.+)$/);
+          const q = m ? +m[1] : 1, nom = (m ? m[2] : morceau).trim();
+          if (/hallot/i.test(nom)) { const h = plats.find((x) => /hallot/i.test(x.nom)); ajouter(h.cat, h.nom, q, plats.indexOf(h), h.ordreCat); }
+          else if (/jus|bouteille/i.test(nom)) ajouter("Boissons", nom.replace(/^bouteilles? de /i, "Bouteille de "), q);
+          else ajouter("Non reconnus", nom, q);
+        });
+      };
+
+      blocs.forEach((b) => {
+        const client = { nom: "", tel: "", mode: "", date: "", adresse: "", paiement: "", total: "", remarque: "" };
+        b.split("\n").forEach((ligne) => {
+          const l = ligne.replace(/^\s*\[[^\]]*\]\s*[^:]*:\s*/, "").trim();   // retire « [29/10 21:00] Nom: » ajouté par WhatsApp
+          let m;
+          if ((m = l.match(/^•\s*(.+?)\s+×\s*(\d+)/))) {
+            const nom = m[1], q = +m[2];
+            if (/^formule/i.test(nom)) ajouter("Formules commandées", nom, q);
+            else compterArticle(nom, q);
+          } else if ((m = l.match(/^[–-]\s*(Poisson|Plat|Croquant)\s*:\s*(.+)$/i))) {
+            const val = m[2].trim();
+            if (/croquant/i.test(m[1])) compterArticle(`Croquant (${val})`, 1); else compterArticle(val, 1);
+          } else if ((m = l.match(/^[–-]\s*Salades?\s*:\s*(.+)$/i))) {
+            m[1].split(",").forEach((s) => { const k = s.trim().match(/^(.+?)(?:\s*×\s*(\d+))?$/); compterArticle(k[1], k[2] ? +k[2] : 1); });
+          } else if ((m = l.match(/^[–-]\s*Inclus\s*:\s*(.+)$/i))) {
+            compterInclus(m[1]);
+          } else if ((m = l.match(/^Nom\s*:\s*(.+)$/i))) client.nom = m[1];
+          else if ((m = l.match(/^Téléphone\s*:\s*(.+)$/i))) client.tel = m[1];
+          else if ((m = l.match(/^Livraison\s*:\s*(.+)$/i))) { client.mode = "Livraison"; client.date = m[1]; }
+          else if ((m = l.match(/^Retrait.*?:\s*(.+)$/i))) { client.mode = "Retrait"; client.date = m[1]; }
+          else if ((m = l.match(/^Adresse\s*:\s*(.+)$/i))) client.adresse = m[1];
+          else if ((m = l.match(/^Paiement\s*:\s*(.+)$/i))) client.paiement = m[1];
+          else if ((m = l.match(/^Total\s*:\s*(.+)$/i))) client.total = m[1];
+          else if ((m = l.match(/^Remarque\s*:\s*(.+)$/i))) client.remarque = m[1];
+        });
+        clients.push(client);
+      });
+      return { totaux, clients };
+    }
+
+    function afficher({ totaux, clients }) {
+      const zone = document.getElementById("resultat");
+      if (!clients.length) {
+        zone.innerHTML = `<p class="vide-prep">Aucune commande trouvée. Vérifiez que chaque message commence par « Bonjour, je souhaite passer commande ».</p>`;
+        return;
+      }
+      const cats = [...totaux.entries()].sort((a, b) => a[1].ordreCat - b[1].ordreCat);
+      const nbArticles = cats.filter(([c]) => c !== "Formules commandées" && c !== "Accompagnements des plats")
+        .reduce((a, [, v]) => a + [...v.lignes.values()].reduce((x, y) => x + y.q, 0), 0);
+      const totalEuros = clients.reduce((a, c) => a + (parseFloat((c.total || "").replace(/[^\d,]/g, "").replace(",", ".")) || 0), 0);
+      const nbLivraisons = clients.filter((c) => c.mode === "Livraison").length;
+      zone.innerHTML = `
+        <div class="resume">
+          <div><strong>${clients.length}</strong><span>commande${clients.length > 1 ? "s" : ""}</span></div>
+          <div><strong>${nbArticles}</strong><span>articles à préparer</span></div>
+          <div><strong>${nbLivraisons}</strong><span>livraison${nbLivraisons > 1 ? "s" : ""}</span></div>
+          ${totalEuros ? `<div><strong>${euros(totalEuros)}</strong><span>total des commandes</span></div>` : ""}
+        </div>
+        <h2 style="margin:28px 0 14px">Préparations</h2>
+        <div class="blocs">${cats.map(([cat, v]) => `
+          <section class="bloc ${cat === "Non reconnus" ? "autres" : ""}">
+            <h2>${echapper(cat)}</h2>
+            ${cat === "Non reconnus" ? `<p class="petit" style="margin:0 0 8px">Ces lignes n'ont pas été trouvées sur la carte : vérifiez-les à la main.</p>` : ""}
+            <ul>${[...v.lignes.entries()].sort((a, b) => a[1].ordre - b[1].ordre || a[0].localeCompare(b[0])).map(([lib, e]) =>
+              `<li><span>${echapper(lib)}</span><b>${e.q}</b></li>`).join("")}</ul>
+          </section>`).join("")}</div>
+        <h2 style="margin:36px 0 14px">Commandes clients</h2>
+        <div class="tableau"><table class="clients">
+          <thead><tr><th>Client</th><th>Téléphone</th><th>Retrait / livraison</th><th>Paiement</th><th>Total</th></tr></thead>
+          <tbody>${clients.map((c) => `<tr>
+            <td>${echapper(c.nom || "—")}${c.remarque ? `<small style="display:block;color:var(--texte-doux)">${echapper(c.remarque)}</small>` : ""}</td>
+            <td class="num">${echapper(c.tel || "—")}</td>
+            <td>${echapper(c.mode || "—")}${c.date ? ` · ${echapper(c.date)}` : ""}${c.adresse ? `<small style="display:block;color:var(--texte-doux)">${echapper(c.adresse)}</small>` : ""}</td>
+            <td>${echapper(c.paiement || "—")}</td>
+            <td class="num">${echapper(c.total || "—")}</td></tr>`).join("")}</tbody>
+        </table></div>`;
+    }
+
+    const champ = document.getElementById("messages");
+    try { champ.value = localStorage.getItem("sarah-traiteur-prep") || ""; } catch (e) {}
+    const lancer = () => { try { localStorage.setItem("sarah-traiteur-prep", champ.value); } catch (e) {} afficher(analyser(champ.value)); };
+    document.getElementById("calculer").addEventListener("click", lancer);
+    document.getElementById("effacer").addEventListener("click", () => { champ.value = ""; lancer(); document.getElementById("resultat").innerHTML = `<p class="vide-prep">Le récap apparaîtra ici.</p>`; });
+    document.getElementById("exemple").addEventListener("click", () => {
+      champ.value = `Bonjour, je souhaite passer commande chez Sarah Traiteur :
+
+• Salade cuite × 2 (12,00 €)
+• Poulet aux olives + Riz jaune × 2 (56,00 €)
+• Croquant (chocolat) × 1 (10,00 €)
+Total : 78,00 €
+
+Retrait à Épinay-sur-Seine : vendredi 6 novembre
+Paiement : Virement
+Nom : Exemple Lévy
+Téléphone : 06 00 00 00 01
+
+Bonjour, je souhaite passer commande chez Sarah Traiteur :
+
+• Salade cuite × 1 (6,00 €)
+• Saumon haïmi × 1 (18,00 €)
+• Poulet aux olives + Couscous × 1 (28,00 €)
+Total : 52,00 €
+
+Livraison : vendredi 6 novembre
+Adresse : 12 rue de Paris, 93800 Épinay-sur-Seine
+Paiement : À la réception
+Nom : Exemple Cohen
+Téléphone : 06 00 00 00 02
+
+Bonjour, je souhaite passer commande chez Sarah Traiteur :
+
+• Formule 4 personnes × 1 (155,00 €)
+   – Poisson : Saumon haïmi
+   – Plat : Harissa (blé) + Riz jaune
+   – Salades : Salade cuite ×3, Méchouia ×2, Betteraves ×2
+   – Croquant : Chocolat
+   – Inclus : 4 hallot, 1 bouteille de jus de raisin
+Total : 155,00 €
+
+Retrait à Épinay-sur-Seine : vendredi 6 novembre
+Paiement : Virement
+Nom : Exemple Benichou
+Téléphone : 06 00 00 00 03`;
+      lancer();
+    });
+    // Le bouton Imprimer ne s'affiche que sur le vrai site
+    if (window.self === window.top) {
+      const imp = document.getElementById("imprimer"); imp.hidden = false;
+      imp.addEventListener("click", () => window.print());
+    }
+    if (champ.value.trim()) lancer();
+  })();
+  </script>
+</body>
+</html>

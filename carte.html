@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>La carte — Sarah Traiteur by L'Italiano</title>
+  <meta name="description" content="La carte de Sarah Traiteur : entrées, plats, accompagnements et desserts casher faits maison.">
+  <link rel="icon" href="images/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="carte">
+  <div id="entete"></div>
+
+  <main class="conteneur">
+    <div class="page-titre">
+      <span class="surtitre">Composez votre repas</span>
+      <h2>La carte</h2>
+      <p>Ajoutez les plats de votre choix, puis validez votre commande.</p>
+      <div class="rappel">Commande avant le <strong id="limite">mercredi 20h</strong> · Retrait à Épinay-sur-Seine ou livraison gratuite (Épinay-sur-Seine, Enghien-les-Bains, Deuil-la-Barre, Saint-Gratien, Montmorency, Soisy-sous-Montmorency, Groslay, Saint-Brice-sous-Forêt, Sarcelles, Gennevilliers) · Paiement par virement ou à la réception</div>
+    </div>
+    <nav class="menu-categories" id="menu-categories" aria-label="Catégories de la carte"></nav>
+    <div id="carte"></div>
+    <div style="height:60px"></div>
+  </main>
+
+  <div class="barre-panier" id="barre-panier">
+    <div class="conteneur">
+      <span id="barre-texte">0 article</span>
+      <a class="bouton" href="commander.html">Valider ma commande</a>
+    </div>
+  </div>
+
+  <div id="pied"></div>
+  <script src="donnees.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
