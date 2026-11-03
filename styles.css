@@ -353,3 +353,6 @@ input:user-invalid, textarea:user-invalid, select:user-invalid { border-color: #
   .commander-flottant { left: 16px; transform: translateY(140%); padding: 13px 26px; }
   .commander-flottant.visible, .commander-flottant.visible:hover { transform: none; }
 }
+
+/* Barre du panier remontée : le bouton « Valider ma commande » reste au-dessus du badge Netlify (en bas à droite) */
+.barre-panier { padding-bottom: calc(14px + 62px + env(safe-area-inset-bottom, 0px)); }
