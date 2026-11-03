@@ -155,6 +155,15 @@
     demarrer();
     document.querySelectorAll("[data-limite]").forEach((el) => (el.textContent = INFOS.limiteCommande));
     document.querySelectorAll("[data-casher]").forEach((el) => (el.textContent = INFOS.casher));
+
+    /* Bouton « Commander » qui suit le client quand il descend dans la page */
+    const flottant = document.createElement("a");
+    flottant.href = "carte.html"; flottant.className = "bouton commander-flottant"; flottant.textContent = "Commander";
+    document.body.appendChild(flottant);
+    const actionsHeros = document.querySelector(".heros .actions");
+    if (actionsHeros && "IntersectionObserver" in window) {
+      new IntersectionObserver(([e]) => flottant.classList.toggle("visible", !e.isIntersecting)).observe(actionsHeros);
+    } else flottant.classList.add("visible");
   }
 
   /* ---------- La carte ---------- */
