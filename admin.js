@@ -33,6 +33,7 @@
       commandes = r.commandes || []; visites = r.visites || [];
       if (r.tableur) { $("#lien-tableur").href = r.tableur; $("#lien-tableur").hidden = false; }
       $("#connexion").hidden = true; $("#espace").hidden = false;
+      try { sessionStorage.setItem("sarah-admin-session", "1"); } catch (e) { /* ignoré */ }
       $("#maj-info").textContent = "Mis à jour à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) +
         ` · ${commandes.length} commande${commandes.length > 1 ? "s" : ""} au total`;
       remplirVendredis(); afficher();
@@ -47,6 +48,7 @@
 
   function deconnecter(message) {
     mdp = ""; ecrire(CLE_MDP, null);
+    try { sessionStorage.removeItem("sarah-admin-session"); } catch (e) { /* ignoré */ }
     if (email) $("#email-admin").value = email;
     $("#espace").hidden = true; $("#connexion").hidden = false;
     $("#erreur-connexion").textContent = message || "";

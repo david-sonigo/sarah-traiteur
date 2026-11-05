@@ -366,3 +366,8 @@ input:user-invalid, textarea:user-invalid, select:user-invalid { border-color: #
 .recommander p { font-size: .95rem; }
 .recommander small { display: block; color: var(--or-clair); font-size: .82rem; }
 .bonjour-client { margin-top: 10px; color: var(--brun); font-weight: 500; }
+
+/* Bouton « Admin » dans le menu (visible seulement sur les appareils de l'admin) */
+.nav .lien-admin { background: var(--or); color: var(--brun-fonce) !important; padding: 6px 14px; border-radius: 999px; font-weight: 600; }
+.nav .lien-admin:hover { background: var(--or-clair); }
+@media (max-width: 600px) { .nav .lien-admin { padding: 5px 11px; } }

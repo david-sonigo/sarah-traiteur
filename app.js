@@ -136,6 +136,10 @@
   }
 
   /* ---------- En-tête et pied de page communs ---------- */
+  // Bouton « Admin » dans le menu : seulement si on vient de la page admin, dans le même onglet.
+  // Un nouvel onglet ou une nouvelle visite du site = vue client normale, sans le bouton.
+  let estAdmin = false;
+  try { estAdmin = sessionStorage.getItem("sarah-admin-session") === "1"; } catch (e) { /* ignoré */ }
   function lien(href, texte, cle, extra = "") {
     return `<a href="${href}" ${page === cle ? 'aria-current="page"' : ""} ${extra}>${texte}</a>`;
   }
@@ -146,6 +150,7 @@
         ${lien("index.html", "Accueil", "accueil", 'class="cacher-mobile"')}
         ${lien("carte.html", "La carte", "carte")}
         <a href="commander.html" class="panier-lien" ${page === "commander" ? 'aria-current="page"' : ""}>Commander<span class="badge" id="badge" hidden>0</span></a>
+        ${estAdmin && page !== "admin" ? `<a href="admin.html" class="lien-admin">Admin</a>` : ""}
       </nav>
     </div></header>`;
 
