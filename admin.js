@@ -322,7 +322,7 @@
   }
 
   /* ---------- Statistiques de passage ---------- */
-  let periode = 30;
+  let periode = 30, toutesVilles = false;
   const LIB_PAGES = { accueil: "Accueil", carte: "La carte", commander: "Page commande", mentions: "Mentions légales" };
   const LIB_SOURCES = { direct: "Accès direct / lien", instagram: "Instagram", facebook: "Facebook", whatsapp: "WhatsApp", google: "Google", tiktok: "TikTok", snapchat: "Snapchat" };
   function barres(entrees, total) {
@@ -341,10 +341,11 @@
     const visiteurs = union(donnees.map((j) => j.ids || []));
     const pagesVues = donnees.reduce((a, j) => a + (j.pages || 0), 0);
     const aujourd = jours.get(iso(new Date()));
-    const parPage = {}, sources = {}, appareils = {}, heures = new Array(24).fill(0), semaine = new Array(7).fill(0);
+    const parPage = {}, sources = {}, appareils = {}, villes = {}, heures = new Array(24).fill(0), semaine = new Array(7).fill(0);
     donnees.forEach((j) => {
       Object.entries(j.parPage || {}).forEach(([p, ids]) => (parPage[p] = (parPage[p] || []).concat(ids)));
       Object.entries(j.appareils || {}).forEach(([a, ids]) => (appareils[a] = (appareils[a] || []).concat(ids)));
+      Object.entries(j.villes || {}).forEach(([v, ids]) => (villes[v] = (villes[v] || []).concat(ids)));
       Object.entries(j.sources || {}).forEach(([s, n]) => (sources[s] = (sources[s] || 0) + n));
       (j.heures || []).forEach((n, h) => (heures[h] += n));
       semaine[(new Date(j.date + "T12:00:00").getDay() + 6) % 7] += (j.ids || []).length;
@@ -359,7 +360,7 @@
     $('[data-panneau="visites"]').innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
         <h2 style="margin:0">Statistiques de passage</h2>
-        <div class="outils">${[7, 30, 90].map((n) => `<button type="button" class="bouton petit ${n === periode ? "" : "secondaire"}" data-periode="${n}">${n} jours</button>`).join("")}</div>
+        <div class="outils"><button type="button" class="bouton petit" id="aller-villes">📍 Villes des visiteurs</button>${[7, 30, 90].map((n) => `<button type="button" class="bouton petit ${n === periode ? "" : "secondaire"}" data-periode="${n}">${n} jours</button>`).join("")}</div>
       </div>
       <div class="chiffres-admin">
         <div><strong>${aujourd ? (aujourd.ids || []).length : 0}</strong><span>visiteurs aujourd'hui</span></div>
@@ -384,6 +385,12 @@
           <p class="petit-texte" style="margin-top:8px">Montre à quelle étape les clients s'arrêtent.</p></div>
         <div class="bloc"><h3>D'où ils viennent</h3>${barres(Object.entries(sources).sort((a, b) => b[1] - a[1]).map(([s, n]) => [LIB_SOURCES[s] || s, n]), totalSources)}
           <p class="petit-texte" style="margin-top:8px">Astuce : sur Instagram, mets le lien <b>sarahtraiteur.fr/?src=instagram</b> pour qu'il soit bien reconnu.</p></div>
+        <div class="bloc" id="bloc-villes"><h3>Villes des visiteurs</h3>
+          ${(() => { const l = Object.entries(villes).map(([v, ids]) => [v, union([ids])]).sort((a, b) => b[1] - a[1]);
+            const avecVille = l.reduce((a, x) => a + x[1], 0);
+            return barres(toutesVilles ? l : l.slice(0, 8), avecVille) +
+              (l.length > 8 ? `<button type="button" class="bouton petit secondaire" id="toutes-villes" style="margin-top:12px">${toutesVilles ? "Voir moins" : `Voir toutes les villes (${l.length})`}</button>` : ""); })()}
+          <p class="petit-texte" style="margin-top:8px">Ville approximative, devinée grâce au réseau internet du visiteur. Sur la 4G/5G, elle peut indiquer une grande ville proche (ex. Paris) au lieu de la vraie ville.</p></div>
         <div class="bloc"><h3>Téléphone ou ordinateur</h3>${barres(Object.entries(appareils).map(([a, ids]) => [a.charAt(0).toUpperCase() + a.slice(1), union([ids])]).sort((a, b) => b[1] - a[1]), visiteurs)}</div>
         <div class="bloc"><h3>Pages les plus vues</h3>${barres(Object.keys(parPage).map((p) => [LIB_PAGES[p] || p, vuPage(p)]).sort((a, b) => b[1] - a[1]))}
           <p class="petit-texte" style="margin-top:8px">Nombre de visiteurs différents par page.</p></div>
@@ -393,6 +400,8 @@
           <div class="graphe-legende"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>23 h</span></div></div>
       </div>
       <p class="petit-texte" style="margin-top:14px">Un « visiteur » = un téléphone ou un ordinateur différent. Tes propres visites ne sont jamais comptées.</p>`;
+    $("#aller-villes").addEventListener("click", () => $("#bloc-villes").scrollIntoView({ behavior: "smooth", block: "center" }));
+    const bv = $("#toutes-villes"); if (bv) bv.addEventListener("click", () => { toutesVilles = !toutesVilles; afficherVisites(); $("#bloc-villes").scrollIntoView({ block: "nearest" }); });
     document.querySelectorAll("[data-periode]").forEach((b) => b.addEventListener("click", () => { periode = +b.dataset.periode; afficherVisites(); }));
   }
 
@@ -433,7 +442,8 @@
       return { date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
         pages: n * 3, ids, sources, heures,
         parPage: { accueil: ids, carte: ids.slice(0, Math.round(n * .7)), commander: ids.slice(0, Math.round(n * .25)), mentions: ids.slice(0, 1) },
-        appareils: { "téléphone": ids.slice(0, Math.round(n * .8)), ordinateur: ids.slice(Math.round(n * .8)) } };
+        appareils: { "téléphone": ids.slice(0, Math.round(n * .8)), ordinateur: ids.slice(Math.round(n * .8)) },
+        villes: ids.reduce((o, x, k) => { const v = ["Épinay-sur-Seine", "Paris", "Sarcelles", "Enghien-les-Bains", "Deuil-la-Barre", "Saint-Gratien", "Montmorency", "Gennevilliers", "Saint-Denis", "Argenteuil", "Créteil", "Tel Aviv (IL)"][(k * 5 + i) % 12]; (o[v] = o[v] || []).push(x); return o; }, {}) };
     });
     return { ok: true, commandes: commandesDemo, visites: visitesDemo };
   }

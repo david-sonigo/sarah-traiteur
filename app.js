@@ -48,7 +48,16 @@
     if (/instagram/i.test(navigator.userAgent) && source === "direct") source = "instagram";
     if (/FBAN|FBAV/i.test(navigator.userAgent) && source === "direct") source = "facebook";
     const appareil = /iPad|Tablet/i.test(navigator.userAgent) ? "tablette" : (/Mobi|Android|iPhone/i.test(navigator.userAgent) ? "téléphone" : "ordinateur");
-    envoyerAuService({ action: "visite", page, visiteur, source, appareil, entree });
+    const donnees = { action: "visite", page, visiteur, source, appareil, entree };
+    if (!entree || !INFOS.urlCommandes) { envoyerAuService(donnees); return; }
+    // Première page de la visite : ville approximative (déduite du réseau internet, l'adresse IP n'est pas gardée)
+    let envoye = false;
+    const fin = (ville) => { if (envoye) return; envoye = true; if (ville) donnees.ville = ville; envoyerAuService(donnees); };
+    const minuteur = setTimeout(() => fin(""), 2500);
+    fetch("https://get.geojs.io/v1/ip/geo.json").then((r) => r.json()).then((g) => {
+      clearTimeout(minuteur);
+      fin(g && g.city ? (g.country_code && g.country_code !== "FR" ? `${g.city} (${g.country_code})` : g.city) : "");
+    }).catch(() => { clearTimeout(minuteur); fin(""); });
   })();
 
   /* ---------- Panier (gardé dans le navigateur du client) ----------
