@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin — Sarah Traiteur</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="Sarah Admin">
+  <meta name="theme-color" content="#2e1a10">
+  <link rel="icon" href="images/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .admin { padding-block: 32px 80px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 26px; }
+    .admin h1 { font-family: var(--serif); font-weight: 500; font-size: clamp(2rem, 4.5vw, 2.8rem); color: var(--brun); }
+    .admin h2 { font-family: var(--serif); font-weight: 500; font-size: 1.7rem; color: var(--brun); margin-bottom: 12px; }
+    .connexion { max-width: 420px; }
+    .connexion input { width: 100%; font: inherit; padding: 12px 14px; border: 1px solid #dccdb4; border-radius: 10px; background: var(--blanc); margin: 8px 0 14px; }
+    .outils { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .outils select { font: inherit; padding: 10px 12px; border: 1px solid #dccdb4; border-radius: 10px; background: var(--blanc); color: var(--texte); }
+    .bouton.secondaire { background: transparent; color: var(--brun); border-color: #dccdb4; }
+    .bouton.secondaire:hover { background: var(--creme-2); }
+    .bouton.petit { padding: 9px 16px; font-size: .78rem; }
+    .onglets { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--creme-2); padding-bottom: 10px; position: sticky; top: 68px; background: var(--creme); z-index: 20; padding-top: 10px; }
+    .onglets button { flex: none; font: inherit; font-weight: 500; font-size: .92rem; padding: 9px 18px; border-radius: 999px; border: 1px solid #dccdb4; background: var(--blanc); color: var(--brun); cursor: pointer; }
+    .onglets button[aria-selected="true"] { background: var(--brun); color: var(--or-clair); border-color: var(--brun); }
+    .chiffres-admin { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(165px, 100%), 1fr)); gap: 12px; }
+    .chiffres-admin div { background: var(--brun); color: var(--creme); border-radius: 12px; padding: 14px 18px; }
+    .chiffres-admin strong { display: block; font-family: var(--serif); font-size: 2rem; color: var(--or-clair); font-weight: 500; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .chiffres-admin span { font-size: .85rem; }
+    .blocs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 18px; align-items: start; }
+    .bloc { background: var(--blanc); border: 1px solid var(--creme-2); border-radius: var(--rayon); padding: 18px 20px; min-width: 0; break-inside: avoid; }
+    .bloc h3 { font-family: var(--serif); font-weight: 500; font-size: 1.4rem; color: var(--brun); margin-bottom: 8px; border-bottom: 1px solid var(--creme-2); padding-bottom: 6px; }
+    .bloc ul { list-style: none; display: grid; }
+    .bloc li { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px dashed var(--creme-2); }
+    .bloc li:last-child { border-bottom: 0; }
+    .bloc li b { font-variant-numeric: tabular-nums; color: var(--brun); font-size: 1.1rem; min-width: 2.2em; text-align: right; }
+    .cmds { display: grid; gap: 14px; }
+    .cmd { background: var(--blanc); border: 1px solid var(--creme-2); border-radius: var(--rayon); padding: 16px 18px; break-inside: avoid; }
+    .cmd.annulee { opacity: .55; }
+    .cmd-haut { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+    .cmd-haut h3 { font-size: 1.15rem; color: var(--brun); }
+    .cmd-haut .montant { font-family: var(--serif); font-size: 1.5rem; color: var(--brun); font-variant-numeric: tabular-nums; }
+    .cmd .infos { color: var(--texte-doux); font-size: .9rem; margin: 4px 0 10px; }
+    .cmd .infos a { color: inherit; }
+    .cmd ul { list-style: none; border-top: 1px dashed var(--creme-2); padding-top: 8px; display: grid; gap: 4px; font-size: .94rem; }
+    .cmd ul small { display: block; color: var(--texte-doux); padding-left: 14px; }
+    .cmd .remarque { margin-top: 8px; background: #fbf0e6; border-radius: 8px; padding: 8px 12px; font-size: .9rem; }
+    .etats { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .etats button { font: inherit; font-size: .82rem; padding: 7px 14px; border-radius: 999px; border: 1px solid #dccdb4; background: transparent; color: var(--brun); cursor: pointer; }
+    .etats button[aria-pressed="true"] { background: var(--brun); color: var(--or-clair); border-color: var(--brun); }
+    .etats button.paye[aria-pressed="true"] { background: #2f6b3a; border-color: #2f6b3a; color: #fff; }
+    .etats button.annule[aria-pressed="true"] { background: #8a2e22; border-color: #8a2e22; color: #fff; }
+    .pastille { display: inline-block; font-size: .75rem; padding: 2px 10px; border-radius: 999px; background: var(--creme-2); color: var(--brun); margin-left: 6px; vertical-align: middle; }
+    .pastille.ok { background: #dcefdc; color: #2f6b3a; }
+    .pastille.non { background: #f6e3cf; color: #8a4b12; }
+    .tableau { overflow-x: auto; border: 1px solid var(--creme-2); border-radius: var(--rayon); background: var(--blanc); }
+    .tableau table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+    .tableau th, .tableau td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--creme-2); white-space: nowrap; }
+    .tableau th { background: var(--creme-2); color: var(--brun); font-weight: 600; }
+    .tableau td.n { text-align: right; font-variant-numeric: tabular-nums; }
+    .graphe { display: flex; align-items: flex-end; gap: 3px; height: 160px; padding: 10px 4px 0; border-bottom: 1px solid var(--creme-2); }
+    .graphe div { flex: 1; background: var(--or); border-radius: 4px 4px 0 0; min-height: 2px; position: relative; }
+    .graphe div:hover { background: var(--brun); }
+    .graphe-legende { display: flex; justify-content: space-between; font-size: .78rem; color: var(--texte-doux); margin-top: 6px; }
+    .barres { list-style: none; display: grid; gap: 10px; }
+    .barres li { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto auto; align-items: center; gap: 10px; border: 0 !important; padding: 0 !important; }
+    .barres .b-nom { font-size: .92rem; }
+    .barres .b-barre { height: 10px; background: var(--creme-2); border-radius: 999px; overflow: hidden; }
+    .barres .b-barre i { display: block; height: 100%; background: var(--or); border-radius: 999px; }
+    .barres b { font-variant-numeric: tabular-nums; color: var(--brun); min-width: 2em; text-align: right; }
+    .barres small { color: var(--texte-doux); font-size: .78rem; min-width: 3em; text-align: right; }
+    .message { color: var(--texte-doux); font-style: italic; }
+    .erreur-admin { color: #8a2e22; font-weight: 500; }
+    .petit-texte { font-size: .85rem; color: var(--texte-doux); }
+    @media print {
+      #entete, #pied, .outils, .onglets, .etats, .ne-pas-imprimer, .commander-flottant { display: none !important; }
+      [data-panneau] { display: block !important; }
+      [data-panneau="visites"], [data-panneau="ca"], [data-panneau="clients"] { display: none !important; }
+      body { background: #fff; }
+      .bloc, .cmd { border-color: #999; }
+      .chiffres-admin div { background: #fff; color: #000; border: 1px solid #999; }
+      .chiffres-admin strong { color: #000; }
+    }
+  </style>
+</head>
+<body data-page="admin">
+  <div id="entete"></div>
+
+  <main class="conteneur admin">
+    <div>
+      <span class="surtitre">Espace réservé</span>
+      <h1>Admin Sarah Traiteur</h1>
+    </div>
+
+    <form class="carte-blanche connexion" id="connexion" hidden>
+      <label for="email-admin"><strong>E-mail</strong></label>
+      <input id="email-admin" type="email" autocomplete="username" required>
+      <label for="mdp"><strong>Mot de passe</strong></label>
+      <input id="mdp" type="password" autocomplete="current-password" required>
+      <button class="bouton" type="submit">Entrer</button>
+      <p class="erreur-admin" id="erreur-connexion" role="alert"></p>
+    </form>
+
+    <div id="espace" hidden>
+      <div class="outils ne-pas-imprimer">
+        <label for="choix-vendredi" class="petit-texte">Vendredi :</label>
+        <select id="choix-vendredi"></select>
+        <button class="bouton petit" type="button" id="actualiser">Actualiser</button>
+        <button class="bouton petit secondaire" type="button" id="imprimer">Imprimer</button>
+        <a class="bouton petit secondaire" id="lien-tableur" target="_blank" rel="noopener" hidden>Google Sheets</a>
+        <a class="bouton petit secondaire" href="index.html" target="_blank" rel="noopener">Voir le site</a>
+        <button class="bouton petit secondaire" type="button" id="deconnexion">Se déconnecter</button>
+      </div>
+      <p class="petit-texte" id="maj-info" style="margin-top:8px"></p>
+
+      <div class="onglets ne-pas-imprimer" role="tablist" style="margin-top:18px">
+        <button type="button" role="tab" data-onglet="resume" aria-selected="true">Résumé</button>
+        <button type="button" role="tab" data-onglet="cuisine" aria-selected="false">À préparer</button>
+        <button type="button" role="tab" data-onglet="commandes" aria-selected="false">Commandes</button>
+        <button type="button" role="tab" data-onglet="clients" aria-selected="false">Clients</button>
+        <button type="button" role="tab" data-onglet="ca" aria-selected="false">Chiffre d'affaires</button>
+        <button type="button" role="tab" data-onglet="visites" aria-selected="false">Statistiques</button>
+      </div>
+
+      <section data-panneau="resume" style="padding:24px 0 0"></section>
+      <section data-panneau="cuisine" style="padding:24px 0 0" hidden></section>
+      <section data-panneau="commandes" style="padding:24px 0 0" hidden></section>
+      <section data-panneau="clients" style="padding:24px 0 0" hidden></section>
+      <section data-panneau="ca" style="padding:24px 0 0" hidden></section>
+      <section data-panneau="visites" style="padding:24px 0 0" hidden></section>
+    </div>
+  </main>
+
+  <div id="pied"></div>
+  <script src="donnees.js"></script>
+  <script src="app.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

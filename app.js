@@ -10,6 +10,46 @@
   })));
   const trouverPlat = (id) => tousLesPlats.find((p) => p.id === id);
   const page = document.body.dataset.page;
+  const categorieDe = {};
+  CARTE.forEach((c) => c.plats.forEach((p) => (categorieDe[p.id] = c.court || c.categorie)));
+
+  /* ---------- Envoi au service des commandes (Google Sheets), pour la page admin ---------- */
+  function envoyerAuService(donnees) {
+    if (!INFOS.urlCommandes) return;
+    try {
+      fetch(INFOS.urlCommandes, { method: "POST", mode: "no-cors", keepalive: true,
+        headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(donnees) }).catch(() => {});
+    } catch (e) { /* jamais bloquant pour le client */ }
+  }
+  // Compteur de visites (pas sur les pages internes, ni sur les appareils marqués « ne pas me compter » dans l'admin)
+  (function compterVisite() {
+    if (!["accueil", "carte", "commander", "mentions"].includes(page)) return;
+    let visiteur = "";
+    try {
+      if (localStorage.getItem("sarah-admin-ne-pas-compter")) return;
+      visiteur = localStorage.getItem("sarah-visiteur");
+      if (!visiteur) { visiteur = Math.random().toString(36).slice(2, 12); localStorage.setItem("sarah-visiteur", visiteur); }
+    } catch (e) { visiteur = "anonyme"; }
+    // D'où vient le visiteur (seulement pour la première page de sa visite) et sur quel appareil
+    let entree = false;
+    try { entree = !sessionStorage.getItem("sarah-session"); sessionStorage.setItem("sarah-session", "1"); } catch (e) { entree = true; }
+    const params = new URLSearchParams(location.search), ref = document.referrer.toLowerCase();
+    let source = (params.get("utm_source") || params.get("src") || "").toLowerCase();
+    if (!source) {
+      if (!ref || ref.includes(location.hostname)) source = "direct";
+      else if (/instagram/.test(ref)) source = "instagram";
+      else if (/facebook|fb\./.test(ref)) source = "facebook";
+      else if (/whatsapp|wa\.me/.test(ref)) source = "whatsapp";
+      else if (/google\./.test(ref)) source = "google";
+      else if (/tiktok/.test(ref)) source = "tiktok";
+      else if (/snapchat/.test(ref)) source = "snapchat";
+      else { try { source = new URL(document.referrer).hostname.replace(/^www\./, ""); } catch (e) { source = "autre"; } }
+    }
+    if (/instagram/i.test(navigator.userAgent) && source === "direct") source = "instagram";
+    if (/FBAN|FBAV/i.test(navigator.userAgent) && source === "direct") source = "facebook";
+    const appareil = /iPad|Tablet/i.test(navigator.userAgent) ? "tablette" : (/Mobi|Android|iPhone/i.test(navigator.userAgent) ? "téléphone" : "ordinateur");
+    envoyerAuService({ action: "visite", page, visiteur, source, appareil, entree });
+  })();
 
   /* ---------- Panier (gardé dans le navigateur du client) ----------
      - panier     : produits simples        { id: quantité }
@@ -34,6 +74,29 @@
   function sauver() {
     try { localStorage.setItem(CLE, JSON.stringify({ panier, selections, formules })); } catch (e) { /* navigation privée : on ignore */ }
     majBadge();
+  }
+  /* Le site se souvient du client (sur son appareil) : coordonnées + dernière commande */
+  const CLE_CLIENT = "sarah-traiteur-client", CLE_DERNIERE = "sarah-traiteur-derniere";
+  const lireJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)) || null; } catch (e) { return null; } };
+  const ecrireJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* navigation privée */ } };
+  function recommanderHtml() {
+    const d = lireJSON(CLE_DERNIERE), client = lireJSON(CLE_CLIENT);
+    if (!d || !d.contenu) return "";
+    const quand = d.date ? new Date(d.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : "";
+    return `<div class="recommander">
+      <p>${client && client.prenom ? `Bon retour ${echapper(client.prenom)} !` : "Bon retour !"}
+        <small>Votre dernière commande${quand ? ` du ${quand}` : ""} : ${d.n} article${d.n > 1 ? "s" : ""}${d.total ? " · " + euros(d.total) : ""}</small></p>
+      <button type="button" class="bouton" id="bouton-recommander">Recommander la même chose</button>
+    </div>`;
+  }
+  function brancherRecommander() {
+    const b = document.getElementById("bouton-recommander");
+    if (!b) return;
+    b.addEventListener("click", () => {
+      const d = lireJSON(CLE_DERNIERE);
+      ecrireJSON(CLE, d.contenu);
+      location.reload();
+    });
   }
   const nbArticles = () =>
     Object.values(panier).reduce((a, b) => a + b, 0) + Object.values(selections).reduce((a, l) => a + l.length, 0) + formules.length;
@@ -169,6 +232,7 @@
   /* ---------- La carte ---------- */
   if (page === "carte") {
     document.getElementById("limite").textContent = INFOS.limiteCommande;
+    if (!nbArticles()) { document.getElementById("recommander").innerHTML = recommanderHtml(); brancherRecommander(); }
     const zone = document.getElementById("carte");
     const prixHtml = (p) => `<div class="prix">${p.prix == null ? "Prix à venir" : euros(p.prix)}${p.unite ? `<small>${echapper(p.unite)}</small>` : ""}</div>`;
     const compteur = (cle, nom) => `
@@ -436,6 +500,16 @@
       blocAdresse.hidden = !livraison; champAdresse.required = livraison; champVille.required = livraison;
     };
     document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener("change", majMode));
+    // Coordonnées déjà remplies si le client a déjà commandé depuis cet appareil
+    const client = lireJSON(CLE_CLIENT);
+    if (client) {
+      ["prenom", "nom", "email", "telephone"].forEach((k) => { if (client[k]) document.getElementById(k).value = client[k]; });
+      if (client.mode === "Livraison" && INFOS.livraison) document.getElementById("mode-livraison").checked = true;
+      if (client.ville) champVille.value = client.ville;
+      if (client.adresse) champAdresse.value = client.adresse;
+      if (client.paiement) { const r = document.querySelector(`input[name="paiement"][value="${CSS.escape(client.paiement)}"]`); if (r) r.checked = true; }
+      majVille();
+    }
     majMode();
 
     // Vendredis possibles : il faut commander avant le mercredi 20h de la même semaine
@@ -449,16 +523,20 @@
       const limite = new Date(d); limite.setDate(d.getDate() - 2); limite.setHours(20, 0, 0, 0);
       if (maintenant < limite) vendredis.push(new Date(d));
     }
+    const isoDe = (v) => `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, "0")}-${String(v.getDate()).padStart(2, "0")}`;
     select.innerHTML = vendredis.map((v) => {
       const texte = v.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
-      return `<option value="${texte}">${texte.charAt(0).toUpperCase() + texte.slice(1)}</option>`;
+      return `<option value="${texte}" data-iso="${isoDe(v)}">${texte.charAt(0).toUpperCase() + texte.slice(1)}</option>`;
     }).join("");
+    // Numéro de commande : le même tant que le client reste sur la page (un double envoi ne crée pas de doublon)
+    const numero = "C" + Date.now().toString(36).toUpperCase().slice(-5) + Math.random().toString(36).slice(2, 4).toUpperCase();
 
     function afficherPanier() {
       const zone = document.getElementById("recap");
       const lignes = lignesPanier(), manques = incomplets();
       if (!lignes.length && !manques.length) {
-        zone.innerHTML = `<p class="vide">Votre panier est vide.</p><p style="margin-top:16px"><a class="bouton" href="carte.html">Voir la carte</a></p>`;
+        zone.innerHTML = `<p class="vide">Votre panier est vide.</p>${recommanderHtml()}<p style="margin-top:16px"><a class="bouton" href="carte.html">Voir la carte</a></p>`;
+        brancherRecommander();
         return;
       }
       const { total, complet } = totalPanier();
@@ -520,7 +598,7 @@
       const lignes = lignesPanier().map((l) => `• ${l.nom} × ${l.q}${l.prix != null ? ` (${euros(l.prix * l.q)})` : ""}` +
         (l.details ? "\n" + l.details.map((d) => `   – ${d}`).join("\n") : ""));
       const message = [
-        `Bonjour, je souhaite passer commande chez ${INFOS.nom} :`,
+        `Bonjour, je souhaite passer commande chez ${INFOS.nom} (n° ${numero}) :`,
         "",
         ...lignes,
         complet ? `Total : ${euros(total)}` : "",
@@ -528,10 +606,27 @@
         f.get("mode") === "Livraison" ? `Livraison : ${f.get("date")}` : `Retrait à ${INFOS.adresseRetrait} : ${f.get("date")}`,
         f.get("mode") === "Livraison" ? `Adresse : ${f.get("adresse")}, ${f.get("ville")}` + (f.get("ville") === "Autre ville" ? " (hors zone : conditions à voir par téléphone)" : " (livraison gratuite)") : "",
         `Paiement : ${f.get("paiement")}`,
-        `Nom : ${f.get("nom")}`,
+        `Nom : ${f.get("prenom")} ${f.get("nom")}`,
         `Téléphone : ${f.get("telephone")}`,
+        `E-mail : ${f.get("email")}`,
         f.get("remarque") ? `Remarque : ${f.get("remarque")}` : "",
       ].filter((l, i, arr) => l !== "" || arr[i - 1] !== "").join("\n");
+      const articles = lignesPanier().map((l) => {
+        if (l.ref.t === "formule") return { t: "formule", nom: l.nom, q: 1, prix: l.prix, details: l.details };
+        const p = trouverPlat(l.ref.id), a = { t: "plat", cat: categorieDe[l.ref.id], nom: p.nom, q: l.q, prix: p.prix };
+        if (l.ref.v) { if (p.choix.ajout) a.accomp = l.ref.v; else a.choix = l.ref.v; }
+        return a;
+      });
+      const optionDate = select.selectedOptions[0];
+      envoyerAuService({ action: "commande", commande: {
+        id: numero, vendredi: f.get("date"), vendrediISO: optionDate ? optionDate.dataset.iso : "",
+        prenom: f.get("prenom"), nom: f.get("nom"), email: f.get("email"), telephone: f.get("telephone"), mode: f.get("mode"),
+        ville: f.get("mode") === "Livraison" ? f.get("ville") : "", adresse: f.get("mode") === "Livraison" ? f.get("adresse") : "",
+        paiement: f.get("paiement"), remarque: f.get("remarque") || "", total, complet, articles,
+      } });
+      ecrireJSON(CLE_CLIENT, { prenom: f.get("prenom"), nom: f.get("nom"), email: f.get("email"), telephone: f.get("telephone"),
+        mode: f.get("mode"), ville: f.get("ville") || "", adresse: f.get("adresse") || "", paiement: f.get("paiement") });
+      ecrireJSON(CLE_DERNIERE, { date: new Date().toISOString(), n: nbArticles(), total: complet ? total : 0, contenu: { panier, selections, formules } });
       window.open(`https://wa.me/${INFOS.whatsapp}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
       document.getElementById("merci").hidden = false;
     });

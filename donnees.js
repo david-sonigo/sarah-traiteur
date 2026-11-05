@@ -18,6 +18,9 @@ const INFOS = {
   villesLivraisonGratuite: ["Épinay-sur-Seine", "Enghien-les-Bains", "Deuil-la-Barre", "Saint-Gratien", "Montmorency", "Soisy-sous-Montmorency", "Groslay", "Saint-Brice-sous-Forêt", "Sarcelles", "Gennevilliers"],
   limiteCommande: "mercredi 20h",
   casher: "Cuisine casher — surveillance Lameadrine, viande Rav Katz",
+  // Adresse du « service des commandes » Google (Apps Script) : enregistre les commandes et les visites
+  // pour la page admin. Laisser vide pour désactiver.
+  urlCommandes: "https://script.google.com/macros/s/AKfycbzNXvV4QLOjTemrmmzgJul-U94_T_7WPIJV8AP32VOJEYdacBJRRaMrGjzlllJ1z4JH/exec",
 };
 
 /* Accompagnements proposés au choix avec chaque plat (obligatoire). */

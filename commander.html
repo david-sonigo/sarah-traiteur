@@ -29,9 +29,20 @@
       <form class="carte-blanche" id="formulaire">
         <h2>Vos coordonnées</h2>
         <p class="petit" style="margin:-6px 0 14px"><span class="oblig">*</span> champ obligatoire</p>
+        <div class="champ-duo">
+          <div class="champ">
+            <label for="prenom">Prénom <span class="oblig">*</span></label>
+            <input id="prenom" name="prenom" required autocomplete="given-name">
+          </div>
+          <div class="champ">
+            <label for="nom">Nom <span class="oblig">*</span></label>
+            <input id="nom" name="nom" required autocomplete="family-name">
+          </div>
+        </div>
         <div class="champ">
-          <label for="nom">Nom et prénom <span class="oblig">*</span></label>
-          <input id="nom" name="nom" required autocomplete="name">
+          <label for="email">E-mail <span class="oblig">*</span></label>
+          <input id="email" name="email" type="email" inputmode="email" required autocomplete="email" placeholder="vous@exemple.fr">
+          <p class="petit" style="margin-top:2px">Vous recevrez le récapitulatif de votre commande par e-mail.</p>
         </div>
         <div class="champ">
           <label for="telephone">Numéro de téléphone <span class="oblig">*</span></label>
