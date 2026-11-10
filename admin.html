@@ -73,13 +73,17 @@
     .barres .b-barre i { display: block; height: 100%; background: var(--or); border-radius: 999px; }
     .barres b { font-variant-numeric: tabular-nums; color: var(--brun); min-width: 2em; text-align: right; }
     .barres small { color: var(--texte-doux); font-size: .78rem; min-width: 3em; text-align: right; }
+    .gagnant { margin-top: 18px; background: var(--brun); color: var(--creme); border-radius: var(--rayon); padding: 24px; text-align: center; }
+    .gagnant .nom-gagnant { font-family: var(--serif); font-size: clamp(2rem, 6vw, 3rem); color: var(--or-clair); line-height: 1.1; margin: 6px 0; }
+    .gagnant .actions-gagnant { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+    .gagnant.roule .nom-gagnant { opacity: .75; }
     .message { color: var(--texte-doux); font-style: italic; }
     .erreur-admin { color: #8a2e22; font-weight: 500; }
     .petit-texte { font-size: .85rem; color: var(--texte-doux); }
     @media print {
       #entete, #pied, .outils, .onglets, .etats, .ne-pas-imprimer, .commander-flottant { display: none !important; }
       [data-panneau] { display: block !important; }
-      [data-panneau="visites"], [data-panneau="ca"], [data-panneau="clients"] { display: none !important; }
+      [data-panneau="visites"], [data-panneau="ca"], [data-panneau="clients"], [data-panneau="tirage"] { display: none !important; }
       body { background: #fff; }
       .bloc, .cmd { border-color: #999; }
       .chiffres-admin div { background: #fff; color: #000; border: 1px solid #999; }
@@ -122,6 +126,7 @@
         <button type="button" role="tab" data-onglet="cuisine" aria-selected="false">À préparer</button>
         <button type="button" role="tab" data-onglet="commandes" aria-selected="false">Commandes</button>
         <button type="button" role="tab" data-onglet="clients" aria-selected="false">Clients</button>
+        <button type="button" role="tab" data-onglet="tirage" aria-selected="false">🎁 Tirage au sort</button>
         <button type="button" role="tab" data-onglet="ca" aria-selected="false">Chiffre d'affaires</button>
         <button type="button" role="tab" data-onglet="visites" aria-selected="false">Statistiques</button>
       </div>
@@ -130,6 +135,7 @@
       <section data-panneau="cuisine" style="padding:24px 0 0" hidden></section>
       <section data-panneau="commandes" style="padding:24px 0 0" hidden></section>
       <section data-panneau="clients" style="padding:24px 0 0" hidden></section>
+      <section data-panneau="tirage" style="padding:24px 0 0" hidden></section>
       <section data-panneau="ca" style="padding:24px 0 0" hidden></section>
       <section data-panneau="visites" style="padding:24px 0 0" hidden></section>
     </div>

@@ -24,6 +24,10 @@
   // Compteur de visites (pas sur les pages internes, ni sur les appareils marqués « ne pas me compter » dans l'admin)
   (function compterVisite() {
     if (!["accueil", "carte", "commander", "mentions"].includes(page)) return;
+    // Robots (Google, aperçus de liens WhatsApp/Instagram/Facebook…) : jamais comptés
+    if (navigator.webdriver || /bot|crawl|spider|slurp|preview|headless|lighthouse|facebookexternalhit|whatsapp|telegram|discord|skype/i.test(navigator.userAgent)) return;
+    // Visiteur hors de France repéré plus tôt dans la même visite : pas compté
+    try { if (sessionStorage.getItem("sarah-hors-france")) return; } catch (e) { /* ignoré */ }
     let visiteur = "";
     try {
       if (localStorage.getItem("sarah-admin-ne-pas-compter")) return;
@@ -56,7 +60,13 @@
     const minuteur = setTimeout(() => fin(""), 2500);
     fetch("https://get.geojs.io/v1/ip/geo.json").then((r) => r.json()).then((g) => {
       clearTimeout(minuteur);
-      fin(g && g.city ? (g.country_code && g.country_code !== "FR" ? `${g.city} (${g.country_code})` : g.city) : "");
+      if (g && g.country_code && g.country_code !== "FR") {
+        // Hors de France (robots, VPN, serveurs à l'étranger…) : on ne compte pas cette visite
+        envoye = true;
+        try { sessionStorage.setItem("sarah-hors-france", "1"); } catch (e) { /* ignoré */ }
+        return;
+      }
+      fin(g && g.city ? g.city : "");
     }).catch(() => { clearTimeout(minuteur); fin(""); });
   })();
 
@@ -84,6 +94,12 @@
     try { localStorage.setItem(CLE, JSON.stringify({ panier, selections, formules })); } catch (e) { /* navigation privée : on ignore */ }
     majBadge();
   }
+  /* Tirage au sort du mois */
+  const T = INFOS.tirage && INFOS.tirage.actif ? INFOS.tirage : null;
+  const pointsDe = (montant) => (T ? Math.floor((Number(montant) || 0) / T.montantParPoint) : 0);
+  const banniereTirage = () => T ? `<div class="tirage-banniere">🎁 <span><strong>Tirage au sort chaque fin de mois !</strong>
+      ${T.montantParPoint} € commandés = 1 chance de gagner ${echapper(T.lot)}. <a href="reglement-tirage.html">Voir le règlement</a></span></div>` : "";
+
   /* Le site se souvient du client (sur son appareil) : coordonnées + dernière commande */
   const CLE_CLIENT = "sarah-traiteur-client", CLE_DERNIERE = "sarah-traiteur-derniere";
   const lireJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)) || null; } catch (e) { return null; } };
@@ -193,7 +209,7 @@
       </div>
       <div class="bas">
         <span>© ${new Date().getFullYear()} ${echapper(INFOS.nom)} ${echapper(INFOS.sousTitre)}</span>
-        <a href="mentions-legales.html">Mentions légales</a>
+        <span>${T ? `<a href="reglement-tirage.html">Règlement du tirage au sort</a> · ` : ""}<a href="mentions-legales.html">Mentions légales</a></span>
       </div>
     </div></footer>`;
 
@@ -247,6 +263,7 @@
   if (page === "carte") {
     document.getElementById("limite").textContent = INFOS.limiteCommande;
     if (!nbArticles()) { document.getElementById("recommander").innerHTML = recommanderHtml(); brancherRecommander(); }
+    document.getElementById("recommander").insertAdjacentHTML("afterend", banniereTirage());
     const zone = document.getElementById("carte");
     const prixHtml = (p) => `<div class="prix">${p.prix == null ? "Prix à venir" : euros(p.prix)}${p.unite ? `<small>${echapper(p.unite)}</small>` : ""}</div>`;
     const compteur = (cle, nom) => `
@@ -570,7 +587,9 @@
           </div>
         </div>`).join("") +
         (manques.length ? `<div class="alerte">${manques.map((x) => echapper(phraseManque(x))).join("<br>")}<br><a href="carte.html">Choisir sur la carte</a></div>` : "") +
-        (complet ? `<div class="total"><span>Total</span><span>${euros(total)}</span></div>`
+        (complet ? `<div class="total"><span>Total</span><span>${euros(total)}</span></div>` +
+          (T ? `<p class="tirage-points">🎁 ${pointsDe(total) > 0 ? `Cette commande vous rapporte <strong>${pointsDe(total)} point${pointsDe(total) > 1 ? "s" : ""}</strong> pour le tirage au sort du mois`
+            : `Plus que <strong>${euros(T.montantParPoint - total)}</strong> pour gagner 1 point au tirage au sort du mois`} (<a href="reglement-tirage.html">règlement</a>).</p>` : "")
                  : `<p class="petit">Le total vous sera confirmé par ${echapper(INFOS.contactCommandes)}.</p>`) +
         `<p class="petit"><a href="carte.html">Modifier ma commande</a></p>`;
     }

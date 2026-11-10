@@ -20,6 +20,9 @@ const INFOS = {
   casher: "Cuisine casher — surveillance Lameadrine, viande Rav Katz",
   // Adresse du « service des commandes » Google (Apps Script) : enregistre les commandes et les visites
   // pour la page admin. Laisser vide pour désactiver.
+  // Tirage au sort du mois : 1 point par tranche de « montantParPoint » € commandée.
+  // « lot » = ce qui est affiché aux clients (tu peux aussi le changer dans l'admin avant chaque tirage).
+  tirage: { actif: false, montantParPoint: 50, lot: "un dessert au choix" }, // false = désactivé : rien ne s'affiche
   urlCommandes: "https://script.google.com/macros/s/AKfycbzNXvV4QLOjTemrmmzgJul-U94_T_7WPIJV8AP32VOJEYdacBJRRaMrGjzlllJ1z4JH/exec",
 };
 

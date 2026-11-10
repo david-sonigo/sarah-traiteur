@@ -11,6 +11,7 @@
 
   // Tout appareil qui ouvre la page admin n'est plus jamais compté dans les visites
   ecrire("sarah-admin-ne-pas-compter", "1");
+  let tirages = [];
   let mdp = lire(CLE_MDP) || "", email = lire(CLE_EMAIL) || "", commandes = [], visites = [], vendrediChoisi = null;
 
   /* ---------- Appels au service Google ---------- */
@@ -30,7 +31,7 @@
         if (r.erreur === "mdp") { deconnecter("E-mail ou mot de passe incorrect."); return; }
         throw new Error(r.erreur);
       }
-      commandes = r.commandes || []; visites = r.visites || [];
+      commandes = r.commandes || []; visites = r.visites || []; tirages = r.tirages || [];
       if (r.tableur) { $("#lien-tableur").href = r.tableur; $("#lien-tableur").hidden = false; }
       $("#connexion").hidden = true; $("#espace").hidden = false;
       try { sessionStorage.setItem("sarah-admin-session", "1"); } catch (e) { /* ignoré */ }
@@ -95,7 +96,7 @@
   const actives = (liste) => liste.filter((c) => c.statut !== "Annulée");
 
   function afficher() {
-    afficherResume(); afficherCuisine(); afficherCommandes(); afficherCA(); afficherClients(); afficherVisites();
+    afficherResume(); afficherCuisine(); afficherCommandes(); afficherCA(); afficherClients(); afficherTirage(); afficherVisites();
   }
 
   /* ---------- Résumé ---------- */
@@ -321,8 +322,106 @@
     document.body.appendChild(a); a.click(); a.remove();
   }
 
+  /* ---------- Tirage au sort du mois ---------- */
+  const TIRAGE = INFOS.tirage || { montantParPoint: 50, lot: "un dessert au choix" };
+  const cleClient = (c) => (String(c.telephone || "").replace(/\D/g, "").replace(/^33/, "0")) || String(c.email || "").toLowerCase() || nomComplet(c).toLowerCase();
+  const moisDe = (c) => String(c.recu).slice(0, 7);
+  const nomMoisLong = (k) => { const t = new Date(k + "-15T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" }); return t.charAt(0).toUpperCase() + t.slice(1); };
+  let moisTirage = null, lotTirage = TIRAGE.lot, tirageEnCours = false;
+  function participantsDu(mois) {
+    const parClient = new Map();
+    commandes.filter((c) => moisDe(c) === mois && c.statut === "Confirmée").forEach((c) => {
+      const k = cleClient(c), x = parClient.get(k) || { nom: nomComplet(c), telephone: c.telephone, email: c.email, commandes: 0, total: 0, points: 0 };
+      x.commandes++; x.total += c.total; x.points += Math.floor(c.total / TIRAGE.montantParPoint); parClient.set(k, x);
+    });
+    return [...parClient.values()].sort((a, b) => b.points - a.points);
+  }
+  function tirer(liste) {
+    const total = liste.reduce((a, p) => a + p.points, 0);
+    const alea = new Uint32Array(1); crypto.getRandomValues(alea);
+    let n = alea[0] % total;
+    for (const p of liste) { if (n < p.points) return p; n -= p.points; }
+    return liste[liste.length - 1];
+  }
+  function afficherTirage() {
+    const d = new Date(), courant = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const prec = new Date(d.getFullYear(), d.getMonth() - 1, 15), precedent = `${prec.getFullYear()}-${String(prec.getMonth() + 1).padStart(2, "0")}`;
+    const moisListe = [...new Set([courant, precedent, ...commandes.map(moisDe).filter((m) => /^\d{4}-\d{2}$/.test(m))])].sort().reverse();
+    if (!moisTirage) moisTirage = tirages.some((t) => t.mois === precedent) ? courant : precedent;
+    const participants = participantsDu(moisTirage).filter((p) => p.points > 0);
+    const sansPoint = participantsDu(moisTirage).filter((p) => p.points === 0).length;
+    const enAttente = commandes.filter((c) => moisDe(c) === moisTirage && c.statut === "Nouvelle").length;
+    const totalPoints = participants.reduce((a, p) => a + p.points, 0);
+    const deja = tirages.find((t) => t.mois === moisTirage);
+    const wa = (t) => { const n = String(t || "").replace(/[^\d+]/g, ""); return n.startsWith("0") ? "33" + n.slice(1) : n.replace("+", ""); };
+    const messageGagnant = (g, lot) => `Bonjour ${String(g).split(" ")[0]} ! 🎉 Bonne nouvelle : vous avez gagné le tirage au sort Sarah Traiteur du mois de ${nomMoisLong(moisTirage).toLowerCase()} ! Vous remportez ${lot}, offert lors de votre prochaine commande. Merci pour votre fidélité !`;
+    $('[data-panneau="tirage"]').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <h2 style="margin:0">Tirage au sort</h2>
+        <div class="outils"><select id="mois-tirage">${moisListe.map((m) => `<option value="${m}" ${m === moisTirage ? "selected" : ""}>${nomMoisLong(m)}${m === courant ? " (en cours)" : ""}</option>`).join("")}</select></div>
+      </div>
+      <p class="petit-texte">1 point par tranche de ${TIRAGE.montantParPoint} € par commande · seules les commandes <strong>confirmées</strong> du mois comptent · plus un client a de points, plus il a de chances.</p>
+      ${enAttente ? `<p class="remarque" style="margin-top:10px;background:#fbf0e6;border-radius:8px;padding:8px 12px">⚠️ ${enAttente} commande(s) de ce mois sont encore « Nouvelle » : confirme-les dans l'onglet Commandes pour qu'elles comptent.</p>` : ""}
+      <div class="chiffres-admin" style="margin-top:14px">
+        <div><strong>${participants.length}</strong><span>participant${participants.length > 1 ? "s" : ""}</span></div>
+        <div><strong>${totalPoints}</strong><span>points au total</span></div>
+        <div><strong>${sansPoint}</strong><span>client(s) sous ${TIRAGE.montantParPoint} €</span></div>
+      </div>
+      ${deja ? `
+        <div class="gagnant">
+          <div>Gagnant du mois de ${ech(nomMoisLong(moisTirage).toLowerCase())}</div>
+          <div class="nom-gagnant">🎉 ${ech(deja.gagnant)}</div>
+          <div>${ech(deja.lot)} · ${ech(deja.points)} point(s) sur ${ech(deja.totalPoints)} · tiré le ${ech(String(deja.date).slice(0, 10).split("-").reverse().join("/"))}</div>
+          <div class="actions-gagnant">
+            <a class="bouton" target="_blank" rel="noopener" href="https://wa.me/${ech(wa(deja.telephone))}?text=${encodeURIComponent(messageGagnant(deja.gagnant, deja.lot))}">Prévenir sur WhatsApp</a>
+            <a class="bouton contour" href="tel:${ech(String(deja.telephone).replace(/[^\d+]/g, ""))}">Appeler ${ech(deja.telephone)}</a>
+          </div>
+        </div>` : `
+        <div class="bloc" style="margin-top:18px">
+          <h3>Lancer le tirage de ${ech(nomMoisLong(moisTirage).toLowerCase())}</h3>
+          <label for="lot-tirage" class="petit-texte">Lot à gagner</label>
+          <input id="lot-tirage" value="${ech(lotTirage)}" style="width:100%;font:inherit;padding:10px 12px;border:1px solid #dccdb4;border-radius:10px;background:var(--blanc);margin:6px 0 12px">
+          ${moisTirage === courant ? `<p class="petit-texte" style="margin-bottom:10px">⚠️ Ce mois n'est pas terminé : attends le début du mois prochain pour tirer au sort.</p>` : ""}
+          <button type="button" class="bouton" id="lancer-tirage" ${participants.length && !tirageEnCours ? "" : "disabled"}>🎲 Lancer le tirage au sort</button>
+          <p class="petit-texte" style="margin-top:8px">Le résultat est enregistré tout de suite et ne peut pas être refait (c'est plus juste pour les clients).</p>
+          <div id="zone-gagnant"></div>
+        </div>`}
+      <div class="bloc" style="margin-top:18px"><h3>Participants de ${ech(nomMoisLong(moisTirage).toLowerCase())}</h3>
+        ${participants.length ? `<div class="tableau"><table><thead><tr><th>Client</th><th>Commandes</th><th>Total</th><th>Points</th><th>Chances</th></tr></thead><tbody>
+          ${participants.map((p) => `<tr><td><strong>${ech(p.nom)}</strong><br><span class="petit-texte">${ech(p.telephone)}</span></td><td class="n">${p.commandes}</td><td class="n">${euros(p.total)}</td><td class="n">${p.points}</td><td class="n">${Math.round((p.points / totalPoints) * 100)} %</td></tr>`).join("")}
+          </tbody></table></div>` : `<p class="message">Pas encore de participant ce mois-ci.</p>`}
+      </div>
+      ${tirages.length ? `<div class="bloc" style="margin-top:18px"><h3>Anciens gagnants</h3><ul>${tirages.slice().sort((a, b) => b.mois.localeCompare(a.mois)).map((t) =>
+        `<li><span>${ech(nomMoisLong(t.mois))} · <strong>${ech(t.gagnant)}</strong> · ${ech(t.lot)}</span><b>${ech(t.points)} pt</b></li>`).join("")}</ul></div>` : ""}`;
+    $("#mois-tirage").addEventListener("change", (e) => { moisTirage = e.target.value; afficherTirage(); });
+    const champLot = $("#lot-tirage"); if (champLot) champLot.addEventListener("input", () => (lotTirage = champLot.value));
+    const bouton = $("#lancer-tirage");
+    if (bouton) bouton.addEventListener("click", async () => {
+      if (moisTirage === courant && !confirm("Le mois n'est pas terminé. Lancer quand même le tirage ?")) return;
+      tirageEnCours = true; bouton.disabled = true;
+      const gagnant = tirer(participants), lot = (lotTirage || TIRAGE.lot).trim();
+      const zone = $("#zone-gagnant");
+      // Petite animation : les noms défilent avant d'afficher le gagnant
+      let i = 0; const debut = Date.now();
+      await new Promise((fin) => { const tour = () => {
+        zone.innerHTML = `<div class="gagnant roule"><div>Tirage en cours…</div><div class="nom-gagnant">${ech(participants[i++ % participants.length].nom)}</div></div>`;
+        if (Date.now() - debut < 2600) setTimeout(tour, 60 + (Date.now() - debut) / 20); else fin(); }; tour(); });
+      const tirage = { mois: moisTirage, gagnant: gagnant.nom, telephone: gagnant.telephone, email: gagnant.email, lot, points: gagnant.points, totalPoints, participants: participants.length };
+      try {
+        const r = await appel("tirage", { tirage });
+        if (!r.ok) throw new Error(r.erreur);
+        tirages.push(Object.assign({ date: aujourdHui() }, tirage));
+      } catch (e) {
+        tirageEnCours = false;
+        zone.innerHTML = `<p class="erreur-admin" style="margin-top:12px">${e.message === "deja" ? "Ce mois a déjà été tiré au sort." : "Le tirage n'a pas pu être enregistré. Vérifie ta connexion et réessaie."}</p>`;
+        bouton.disabled = false; return;
+      }
+      tirageEnCours = false; afficherTirage();
+    });
+  }
+
   /* ---------- Statistiques de passage ---------- */
-  let periode = 30, toutesVilles = false;
+  let periode = "jour", toutesVilles = false; // par défaut : la vue « Aujourd'hui »
   const LIB_PAGES = { accueil: "Accueil", carte: "La carte", commander: "Page commande", mentions: "Mentions légales" };
   const LIB_SOURCES = { direct: "Accès direct / lien", instagram: "Instagram", facebook: "Facebook", whatsapp: "WhatsApp", google: "Google", tiktok: "TikTok", snapchat: "Snapchat" };
   function barres(entrees, total) {
@@ -332,51 +431,74 @@
       <li><span class="b-nom">${ech(nom)}</span><span class="b-barre"><i style="width:${(n / max) * 100}%"></i></span>
       <b>${n}</b>${total ? `<small>${Math.round((n / total) * 100)} %</small>` : ""}</li>`).join("")}</ul>`;
   }
+  let jourChoisi = null; // "AAAA-MM-JJ" quand on regarde un seul jour
   function afficherVisites() {
     const jours = new Map(visites.map((v) => [v.date, v]));
     const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const decaler = (jourIso, n) => { const d = new Date(jourIso + "T12:00:00"); d.setDate(d.getDate() + n); return iso(d); };
     const derniers = (n) => Array.from({ length: n }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (n - 1 - i)); return iso(d); });
-    const dates = derniers(periode), donnees = dates.map((d) => jours.get(d)).filter(Boolean);
+    const auj = iso(new Date()), hier = decaler(auj, -1);
+    const modeJour = periode === "jour";
+    if (modeJour && !jourChoisi) jourChoisi = auj;
+    const dates = modeJour ? [jourChoisi] : derniers(periode), donnees = dates.map((d) => jours.get(d)).filter(Boolean);
     const union = (listes) => new Set(listes.flat()).size;
     const visiteurs = union(donnees.map((j) => j.ids || []));
     const pagesVues = donnees.reduce((a, j) => a + (j.pages || 0), 0);
-    const aujourd = jours.get(iso(new Date()));
     const parPage = {}, sources = {}, appareils = {}, villes = {}, heures = new Array(24).fill(0), semaine = new Array(7).fill(0);
     donnees.forEach((j) => {
       Object.entries(j.parPage || {}).forEach(([p, ids]) => (parPage[p] = (parPage[p] || []).concat(ids)));
       Object.entries(j.appareils || {}).forEach(([a, ids]) => (appareils[a] = (appareils[a] || []).concat(ids)));
-      Object.entries(j.villes || {}).forEach(([v, ids]) => (villes[v] = (villes[v] || []).concat(ids)));
+      Object.entries(j.villes || {}).forEach(([v, ids]) => { if (!/\([A-Z]{2}\)$/.test(v)) villes[v] = (villes[v] || []).concat(ids); });
       Object.entries(j.sources || {}).forEach(([s, n]) => (sources[s] = (sources[s] || 0) + n));
       (j.heures || []).forEach((n, h) => (heures[h] += n));
       semaine[(new Date(j.date + "T12:00:00").getDay() + 6) % 7] += (j.ids || []).length;
     });
     const vuPage = (p) => union([parPage[p] || []]);
-    const debut = dates[0];
-    const nbCommandes = actives(commandes).filter((c) => String(c.recu).slice(0, 10) >= debut).length;
-    const pct = (n) => (visiteurs ? Math.round((n / visiteurs) * 100) + " %" : "—");
+    const debut = dates[0], fin = dates[dates.length - 1];
+    const nbCommandes = actives(commandes).filter((c) => { const d = String(c.recu).slice(0, 10); return d >= debut && d <= fin; }).length;
     const totalSources = Object.values(sources).reduce((a, b) => a + b, 0);
     const maxJour = Math.max(1, ...dates.map((d) => ((jours.get(d) || {}).ids || []).length));
     const nomsJours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+    const joliJour = (d) => { const t = new Date(d + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }); return t.charAt(0).toUpperCase() + t.slice(1); };
+    const libelle = modeJour ? (jourChoisi === auj ? "aujourd'hui" : jourChoisi === hier ? "hier" : "ce jour") : `${periode} j`;
+    const bouton = (cle, texte, actif) => `<button type="button" class="bouton petit ${actif ? "" : "secondaire"}" data-periode="${cle}">${texte}</button>`;
     $('[data-panneau="visites"]').innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
         <h2 style="margin:0">Statistiques de passage</h2>
-        <div class="outils"><button type="button" class="bouton petit" id="aller-villes">📍 Villes des visiteurs</button>${[7, 30, 90].map((n) => `<button type="button" class="bouton petit ${n === periode ? "" : "secondaire"}" data-periode="${n}">${n} jours</button>`).join("")}</div>
+        <div class="outils">
+          ${bouton("auj", "Aujourd'hui", modeJour && jourChoisi === auj)}${bouton("hier", "Hier", modeJour && jourChoisi === hier)}
+          <input type="date" id="choix-jour" max="${auj}" value="${modeJour ? jourChoisi : ""}" title="Choisir un jour" style="font:inherit;padding:8px 10px;border:1px solid #dccdb4;border-radius:10px;background:var(--blanc)">
+          ${[7, 30, 90].map((n) => bouton(n, `${n} jours`, n === periode)).join("")}
+          <button type="button" class="bouton petit" id="aller-villes">📍 Villes</button>
+        </div>
       </div>
+      ${modeJour ? `<div class="outils" style="justify-content:center;margin:4px 0 14px">
+          <button type="button" class="bouton petit secondaire" id="jour-avant" aria-label="Jour précédent">◀</button>
+          <strong style="font-family:var(--serif);font-size:1.5rem;color:var(--brun);min-width:240px;text-align:center">${ech(joliJour(jourChoisi))}</strong>
+          <button type="button" class="bouton petit secondaire" id="jour-apres" aria-label="Jour suivant" ${jourChoisi >= auj ? "disabled" : ""}>▶</button>
+        </div>` : ""}
       <div class="chiffres-admin">
-        <div><strong>${aujourd ? (aujourd.ids || []).length : 0}</strong><span>visiteurs aujourd'hui</span></div>
-        <div><strong>${visiteurs}</strong><span>visiteurs (${periode} j)</span></div>
-        <div><strong>${pagesVues}</strong><span>pages vues (${periode} j)</span></div>
+        <div><strong>${visiteurs}</strong><span>visiteurs (${libelle})</span></div>
+        <div><strong>${pagesVues}</strong><span>pages vues (${libelle})</span></div>
         <div><strong>${visiteurs ? (pagesVues / visiteurs).toFixed(1).replace(".", ",") : "—"}</strong><span>pages par visiteur</span></div>
-        <div><strong>${nbCommandes}</strong><span>commandes (${periode} j)</span></div>
+        <div><strong>${vuPage("carte")}</strong><span>ont regardé la carte</span></div>
+        <div><strong>${nbCommandes}</strong><span>commandes (${libelle})</span></div>
         <div><strong>${visiteurs ? ((nbCommandes / visiteurs) * 100).toFixed(1).replace(".", ",") + " %" : "—"}</strong><span>visiteurs qui commandent</span></div>
       </div>
 
+      ${modeJour ? `
       <div class="bloc" style="margin-top:20px">
-        <h3>Visiteurs par jour</h3>
+        <h3>Heures de passage · ${ech(joliJour(jourChoisi).toLowerCase())}</h3>
+        <div class="graphe">${heures.map((n, h) => `<div style="height:${(n / Math.max(1, ...heures)) * 100}%" title="${h} h – ${h + 1} h : ${n} page${n > 1 ? "s" : ""} vue${n > 1 ? "s" : ""}"></div>`).join("")}</div>
+        <div class="graphe-legende"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>23 h</span></div>
+      </div>` : `
+      <div class="bloc" style="margin-top:20px">
+        <h3>Visiteurs par jour <span class="petit-texte">(clique sur une barre pour voir ce jour en détail)</span></h3>
         <div class="graphe">${dates.map((d) => { const v = ((jours.get(d) || {}).ids || []).length;
-          return `<div style="height:${(v / maxJour) * 100}%" title="${new Date(d + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })} : ${v} visiteur${v > 1 ? "s" : ""}"></div>`; }).join("")}</div>
+          return `<div data-jour="${d}" style="height:${(v / maxJour) * 100}%;cursor:pointer" title="${new Date(d + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })} : ${v} visiteur${v > 1 ? "s" : ""}"></div>`; }).join("")}</div>
         <div class="graphe-legende"><span>${new Date(dates[0] + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span><span>aujourd'hui</span></div>
-      </div>
+      </div>`}
+      ${!visiteurs ? `<p class="message" style="margin-top:14px">Aucune visite enregistrée pour ${modeJour ? "ce jour" : "cette période"}.</p>` : ""}
 
       <div class="blocs" style="margin-top:18px">
         <div class="bloc"><h3>Parcours des visiteurs</h3>${barres([
@@ -394,15 +516,24 @@
         <div class="bloc"><h3>Téléphone ou ordinateur</h3>${barres(Object.entries(appareils).map(([a, ids]) => [a.charAt(0).toUpperCase() + a.slice(1), union([ids])]).sort((a, b) => b[1] - a[1]), visiteurs)}</div>
         <div class="bloc"><h3>Pages les plus vues</h3>${barres(Object.keys(parPage).map((p) => [LIB_PAGES[p] || p, vuPage(p)]).sort((a, b) => b[1] - a[1]))}
           <p class="petit-texte" style="margin-top:8px">Nombre de visiteurs différents par page.</p></div>
-        <div class="bloc"><h3>Jours de passage</h3>${barres(nomsJours.map((n, i) => [n, semaine[i]]))}</div>
+        ${modeJour ? "" : `<div class="bloc"><h3>Jours de passage</h3>${barres(nomsJours.map((n, i) => [n, semaine[i]]))}</div>
         <div class="bloc"><h3>Heures de passage</h3>
           <div class="graphe" style="height:120px">${heures.map((n, h) => `<div style="height:${(n / Math.max(1, ...heures)) * 100}%" title="${h} h – ${h + 1} h : ${n} page${n > 1 ? "s" : ""} vue${n > 1 ? "s" : ""}"></div>`).join("")}</div>
-          <div class="graphe-legende"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>23 h</span></div></div>
+          <div class="graphe-legende"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>23 h</span></div></div>`}
       </div>
-      <p class="petit-texte" style="margin-top:14px">Un « visiteur » = un téléphone ou un ordinateur différent. Tes propres visites ne sont jamais comptées.</p>`;
+      <p class="petit-texte" style="margin-top:14px">Un « visiteur » = un téléphone ou un ordinateur différent. Seules les visites depuis la France sont comptées (les robots et les visites à l'étranger sont ignorés). Tes propres visites ne sont jamais comptées.</p>`;
+    const montrerJour = (d) => { periode = "jour"; jourChoisi = d; afficherVisites(); };
     $("#aller-villes").addEventListener("click", () => $("#bloc-villes").scrollIntoView({ behavior: "smooth", block: "center" }));
     const bv = $("#toutes-villes"); if (bv) bv.addEventListener("click", () => { toutesVilles = !toutesVilles; afficherVisites(); $("#bloc-villes").scrollIntoView({ block: "nearest" }); });
-    document.querySelectorAll("[data-periode]").forEach((b) => b.addEventListener("click", () => { periode = +b.dataset.periode; afficherVisites(); }));
+    document.querySelectorAll("[data-periode]").forEach((b) => b.addEventListener("click", () => {
+      const k = b.dataset.periode;
+      if (k === "auj") montrerJour(auj); else if (k === "hier") montrerJour(hier); else { periode = +k; afficherVisites(); }
+    }));
+    $("#choix-jour").addEventListener("change", (e) => { if (e.target.value) montrerJour(e.target.value); });
+    document.querySelectorAll("[data-jour]").forEach((b) => b.addEventListener("click", () => montrerJour(b.dataset.jour)));
+    const av = $("#jour-avant"), ap = $("#jour-apres");
+    if (av) av.addEventListener("click", () => montrerJour(decaler(jourChoisi, -1)));
+    if (ap) ap.addEventListener("click", () => montrerJour(decaler(jourChoisi, 1)));
   }
 
   /* ---------- Données d'exemple (admin.html?demo) pour voir la page sans le Google Sheets ---------- */
@@ -432,6 +563,13 @@
         { ...p, cat: "Plats", nom: "Pkaïla", accomp: "Couscous", q: 1, prix: 28 },
         { ...p, cat: "Shana Pâtisserie", nom: "Entremets praliné chocolat", q: 1, prix: 50 }], "Nouvelle", "Non"),
     ];
+    // Commandes confirmées du mois dernier, pour essayer le tirage au sort
+    const pm = new Date(); pm.setDate(1); pm.setMonth(pm.getMonth() - 1);
+    const pmISO = (j) => `${pm.getFullYear()}-${String(pm.getMonth() + 1).padStart(2, "0")}-${String(j).padStart(2, "0")}`;
+    [["Cohen Rachel", "06 11 22 33 44", 132], ["Benhamou David", "07 55 44 33 22", 214], ["Attal Sarah", "06 98 76 54 32", 96], ["Cohen Rachel", "06 11 22 33 44", 64], ["Levy Nathan", "06 45 45 45 45", 38]]
+      .forEach(([n, tel, total], k) => commandesDemo.push({ id: "CPM" + k, recu: pmISO(4 + k * 5) + " 19:00", vendredi: "", vendrediISO: pmISO(6 + k * 5),
+        prenom: n.split(" ")[1], nom: n.split(" ")[0], email: "", telephone: tel, mode: "Retrait", ville: "", adresse: "", paiement: "Virement",
+        remarque: "", complet: "oui", statut: "Confirmée", paye: "Oui", articles: [], total }));
     const srcs = ["direct", "instagram", "instagram", "instagram", "whatsapp", "google", "facebook"];
     const visitesDemo = Array.from({ length: 90 }, (_, i) => {
       const d = new Date(); d.setDate(d.getDate() - (89 - i));
@@ -447,6 +585,9 @@
     });
     return { ok: true, commandes: commandesDemo, visites: visitesDemo };
   }
+
+  // Onglet « Tirage au sort » caché tant que le tirage est désactivé dans donnees.js
+  if (!(INFOS.tirage && INFOS.tirage.actif)) { const o = document.querySelector('[data-onglet="tirage"]'); if (o) o.hidden = true; }
 
   /* ---------- Démarrage ---------- */
   if (email) $("#email-admin").value = email;
