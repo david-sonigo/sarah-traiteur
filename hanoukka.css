@@ -1,0 +1,61 @@
+/* THÈME HANOUKKA — pour l'enlever après la fête : supprime les lignes « hanoukka.css » et « hanoukka.js » dans les pages, ou vide ce fichier. */
+/* Thème Hanoukka (aperçu) : bleu roi, blanc, argent et or — tout le site passe aux couleurs de la fête */
+:root {
+  --brun: #1d3f8f;          /* bleu roi */
+  --brun-fonce: #0f2459;    /* bleu nuit */
+  --creme: #f3f7ff;         /* blanc bleuté */
+  --creme-2: #dde7fb;
+  --texte: #10224f;
+  --texte-doux: #4a5d86;
+  --blanc: #ffffff;
+  --or: #d4a93a;
+  --or-clair: #f5d77c;
+}
+body { background: var(--creme) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cg fill='none' stroke='%231d3f8f' stroke-opacity='.07' stroke-width='2'%3E%3Cpath d='M60 38 L72 59 L48 59Z M60 66 L48 45 L72 45Z'/%3E%3C/g%3E%3C/svg%3E"); }
+
+/* Bandeau du haut */
+.bandeau-fete { position: relative; z-index: 60; text-align: center; padding: 10px 16px; font-size: .93rem; color: #fff;
+  background: linear-gradient(90deg, #0f2459, #2a56c6 50%, #0f2459); }
+.bandeau-fete strong { font-family: var(--serif); font-size: 1.25rem; font-style: italic; color: var(--or-clair); margin-right: 6px; }
+.bandeau-fete a { color: var(--or-clair); font-weight: 600; }
+
+/* Guirlande sous l'en-tête : étoiles, toupies et beignets suspendus */
+.guirlande { position: relative; z-index: 45; height: 54px; margin-bottom: -54px; pointer-events: none; overflow: hidden; }
+.guirlande svg { width: 100%; height: 100%; display: block; }
+.guirlande .balance { transform-origin: top center; animation: balance 3s ease-in-out infinite alternate; }
+@keyframes balance { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+
+/* Héros : étoiles de David et étincelles qui tombent */
+.heros::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(ellipse 70% 50% at 50% 100%, rgba(42,86,198,.35), transparent 70%); }
+.etincelles { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.etincelles span { position: absolute; top: -30px; opacity: 0; animation: tombe linear infinite; line-height: 1; }
+@keyframes tombe { 0% { transform: translateY(0) rotate(0); opacity: 0; } 10% { opacity: .95; } 100% { transform: translateY(105vh) rotate(200deg); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .etincelles, .guirlande .balance { animation: none; display: none; } }
+.heros-contenu h1, .heros-contenu > p { background: rgba(15, 36, 89, .78); }
+.heros .bouton.contour { background: rgba(15, 36, 89, .78); }
+
+/* Grande bande : nuit étoilée avec la hanoukia et les toupies */
+.bande-brune { position: relative; overflow: hidden;
+  background: radial-gradient(ellipse 45% 60% at 28% 85%, rgba(245,215,124,.22), transparent 70%), linear-gradient(160deg, #0f2459, #1d3f8f); }
+.bande-brune::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .6;
+  background-image: radial-gradient(2px 2px at 10% 20%, #fff, transparent), radial-gradient(1.5px 1.5px at 30% 70%, #fff, transparent),
+    radial-gradient(2px 2px at 55% 15%, #f5d77c, transparent), radial-gradient(1.5px 1.5px at 75% 55%, #fff, transparent),
+    radial-gradient(2px 2px at 90% 30%, #f5d77c, transparent), radial-gradient(1.5px 1.5px at 45% 90%, #fff, transparent); }
+.hanoukia-deco { display: block; width: min(360px, 85%); margin: 18px auto 0; filter: drop-shadow(0 0 16px rgba(245,215,124,.45)); }
+.hanoukia-deco .flamme { animation: vacille 1.4s ease-in-out infinite alternate; transform-origin: center bottom; }
+@keyframes vacille { from { transform: scaleY(1); opacity: .85; } to { transform: scaleY(1.18); opacity: 1; } }
+
+/* Carte : catégorie beignets mise en avant */
+.menu-categories { background: var(--creme); }
+.menu-categories a[data-ancre="hanoukka"] { background: linear-gradient(135deg, #2a56c6, #0f2459); color: #fff; border-color: #0f2459; }
+.menu-categories a[data-ancre="hanoukka"]::before { content: "🕎 "; }
+#hanoukka { background: linear-gradient(180deg, #e6eeff, transparent); border-radius: 18px; padding: 8px 14px 18px; }
+.promo { background: linear-gradient(90deg, #0f2459, #2a56c6); color: #fff; }
+.chiffre strong, .etape .num { color: var(--brun); }
+/* En-tête, pied de page et barre du panier en bleu nuit (plus de brun) */
+.entete { background: linear-gradient(90deg, #0f2459, #1d3f8f) !important; border-bottom-color: var(--or) !important; }
+.pied { background: linear-gradient(180deg, #1d3f8f, #0f2459); color: #d6e2ff; }
+.barre-panier { background: #0f2459; }
+.heros { background: #0f2459; }
+.plat-photo { background: linear-gradient(135deg, #2a56c6, #0f2459); }
