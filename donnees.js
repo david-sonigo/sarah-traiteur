@@ -59,8 +59,8 @@ const CARTE = [
     precommande: { au: "2026-12-12" },
     remise: { pourcent: 10, jusquau: "2026-11-30" },
     plats: [
-      { id: "b10", nom: "Formule 10 beignets", description: "Production spéciale Rothenberg", prix: 25, photo: "images/plats/beignets.jpg", choix: { nom: "le parfum", liste: ["Sucre", "Confiture", "Chocolat", "Mix"] } },
-      { id: "b20", nom: "Formule 20 beignets", description: "Production spéciale Rothenberg", prix: 45, photo: "images/plats/beignets.jpg", choix: { nom: "le parfum", liste: ["Sucre", "Confiture", "Chocolat", "Mix"] } },
+      { id: "b10", nom: "Formule 10 beignets", description: "Production spéciale Rothenberg", prix: 25, photo: "images/plats/8549869a-9346-47d5-bb98-991a7a58f6ab.jpg", choix: { nom: "le parfum", liste: ["Sucre", "Confiture", "Chocolat", "Mix"] } },
+      { id: "b20", nom: "Formule 20 beignets", description: "Production spéciale Rothenberg", prix: 45, photo: "images/plats/8549869a-9346-47d5-bb98-991a7a58f6ab.jpg", choix: { nom: "le parfum", liste: ["Sucre", "Confiture", "Chocolat", "Mix"] } },
     ],
   },
   {
