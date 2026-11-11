@@ -65,9 +65,14 @@
           <label for="adresse-livraison" style="margin-top:8px">Adresse de livraison</label>
           <textarea id="adresse-livraison" name="adresse" rows="2" autocomplete="street-address" placeholder="Numéro, rue, code postal"></textarea>
         </div>
-        <div class="champ">
+        <div class="champ" id="bloc-vendredi">
           <label for="date">Vendredi de retrait ou de livraison</label>
           <select id="date" name="date" required></select>
+        </div>
+        <div class="champ" id="bloc-date-beignets" hidden>
+          <label for="date-beignets">Jour souhaité pour vos beignets (précommande) <span class="oblig">*</span></label>
+          <input id="date-beignets" name="dateBeignets" type="date">
+          <p class="petit" style="margin-top:2px">Les beignets peuvent être retirés ou livrés le jour de votre choix, pas seulement le vendredi.</p>
         </div>
         <fieldset>
           <legend>Paiement</legend>

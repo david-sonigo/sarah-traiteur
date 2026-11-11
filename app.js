@@ -10,6 +10,12 @@
   })));
   const trouverPlat = (id) => tousLesPlats.find((p) => p.id === id);
   const page = document.body.dataset.page;
+  /* Beignets de Hanoukka : catégorie en précommande (date au choix) avec remise avant une date */
+  const isoJour = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const CAT_PRECO = CARTE.find((c) => c.precommande) || null;
+  const estPreco = (id) => !!CAT_PRECO && CAT_PRECO.plats.some((p) => p.id === id);
+  const remiseActive = () => !!(CAT_PRECO && CAT_PRECO.remise && isoJour(new Date()) <= CAT_PRECO.remise.jusquau);
+  const finRemise = () => CAT_PRECO ? new Date(CAT_PRECO.remise.jusquau + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : "";
   const categorieDe = {};
   CARTE.forEach((c) => c.plats.forEach((p) => (categorieDe[p.id] = c.court || c.categorie)));
 
@@ -152,7 +158,15 @@
     for (const [id, q] of Object.entries(panier)) { const p = trouverPlat(id); if (p.prix == null) complet = false; else total += p.prix * q; }
     for (const [id, l] of Object.entries(selections)) { const p = trouverPlat(id); if (p.prix == null) complet = false; else total += p.prix * l.length; }
     formules.forEach((x) => { total += trouverFormule(x.id).prix; });
-    return { total, complet };
+    // Remise de précommande sur les beignets
+    let remise = 0;
+    if (remiseActive()) {
+      const sousTotal = Object.entries(selections).filter(([id]) => estPreco(id)).reduce((a, [id, l]) => a + trouverPlat(id).prix * l.length, 0)
+        + Object.entries(panier).filter(([id]) => estPreco(id)).reduce((a, [id, q]) => a + trouverPlat(id).prix * q, 0);
+      remise = Math.round(sousTotal * CAT_PRECO.remise.pourcent) / 100;
+      total -= remise;
+    }
+    return { total, complet, remise };
   }
   function changer(id, delta) {
     panier[id] = Math.max(0, (panier[id] || 0) + delta);
@@ -313,6 +327,7 @@
       <div class="categorie" id="${cat.ancre}">
         <h2>${echapper(cat.categorie)}</h2>
         ${cat.note ? `<p class="note">${echapper(cat.note)}</p>` : ""}
+        ${cat.remise && remiseActive() ? `<div class="promo">🕎 <strong>-${cat.remise.pourcent} %</strong> sur les beignets pour toute précommande passée jusqu'au ${finRemise()} inclus !</div>` : ""}
         ${cat.affichage === "liste"
           ? (cat.plats.length ? `<div class="liste">${cat.plats.map((p) => `
               <div class="ligne-plat">
@@ -559,6 +574,22 @@
       const texte = v.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
       return `<option value="${texte}" data-iso="${isoDe(v)}">${texte.charAt(0).toUpperCase() + texte.slice(1)}</option>`;
     }).join("");
+    // Beignets en précommande : champ de date libre ; le vendredi n'est demandé que s'il y a d'autres plats
+    const blocVendredi = document.getElementById("bloc-vendredi"), blocBeignets = document.getElementById("bloc-date-beignets");
+    const champBeignets = document.getElementById("date-beignets");
+    const demain = new Date(); demain.setDate(demain.getDate() + 1);
+    champBeignets.min = isoJour(demain);
+    if (CAT_PRECO && CAT_PRECO.precommande.au) champBeignets.max = CAT_PRECO.precommande.au;
+    const aBeignets = () => Object.keys(selections).some(estPreco) || Object.keys(panier).some(estPreco);
+    const aAutres = () => Object.keys(selections).some((id) => !estPreco(id)) || Object.keys(panier).some((id) => !estPreco(id)) || formules.length > 0;
+    const texteDate = (iso) => { const t = new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }); return t; };
+    function majDates() {
+      const b = aBeignets(), autres = aAutres() || !b;
+      blocBeignets.hidden = !b; champBeignets.required = b;
+      blocVendredi.hidden = !autres; select.required = autres;
+    }
+    majDates();
+
     // Numéro de commande : le même tant que le client reste sur la page (un double envoi ne crée pas de doublon)
     const numero = "C" + Date.now().toString(36).toUpperCase().slice(-5) + Math.random().toString(36).slice(2, 4).toUpperCase();
 
@@ -570,7 +601,7 @@
         brancherRecommander();
         return;
       }
-      const { total, complet } = totalPanier();
+      const { total, complet, remise } = totalPanier();
       const attrs = (r) => `data-t="${r.t}" ${r.id ? `data-id="${echapper(r.id)}"` : ""} ${r.v ? `data-v="${echapper(r.v)}"` : ""} ${r.i != null ? `data-i="${r.i}"` : ""}`;
       zone.innerHTML = lignes.map((l) => `
         <div class="ligne-panier ligne-modif">
@@ -587,6 +618,7 @@
           </div>
         </div>`).join("") +
         (manques.length ? `<div class="alerte">${manques.map((x) => echapper(phraseManque(x))).join("<br>")}<br><a href="carte.html">Choisir sur la carte</a></div>` : "") +
+        (remise ? `<div class="ligne-panier"><div class="lp-nom">Remise précommande beignets (-${CAT_PRECO.remise.pourcent} %)</div><div class="lp-actions"><span class="lp-prix">−${euros(remise)}</span></div></div>` : "") +
         (complet ? `<div class="total"><span>Total</span><span>${euros(total)}</span></div>` +
           (T ? `<p class="tirage-points">🎁 ${pointsDe(total) > 0 ? `Cette commande vous rapporte <strong>${pointsDe(total)} point${pointsDe(total) > 1 ? "s" : ""}</strong> pour le tirage au sort du mois`
             : `Plus que <strong>${euros(T.montantParPoint - total)}</strong> pour gagner 1 point au tirage au sort du mois`} (<a href="reglement-tirage.html">règlement</a>).</p>` : "")
@@ -616,7 +648,7 @@
       } else if (t === "formule" && r === "suppr") {
         formules.splice(+i, 1);
       }
-      sauver(); afficherPanier();
+      sauver(); afficherPanier(); majDates();
     });
 
     document.getElementById("formulaire").addEventListener("submit", (e) => {
@@ -624,19 +656,26 @@
       const erreur = document.getElementById("erreur");
       const f = new FormData(e.target);
       if (!nbArticles()) { erreur.textContent = "Ajoutez au moins un plat depuis la carte."; return; }
-      if (!vendredis.length) { erreur.textContent = "Aucune date disponible pour le moment."; return; }
+      const avecBeignets = aBeignets(), avecAutres = aAutres() || !avecBeignets;
+      if (avecAutres && !vendredis.length) { erreur.textContent = "Aucune date disponible pour le moment."; return; }
+      const dateB = f.get("dateBeignets") || "";
+      if (avecBeignets && (!dateB || dateB < champBeignets.min || (champBeignets.max && dateB > champBeignets.max))) {
+        erreur.textContent = "Choisissez un jour valide pour vos beignets."; champBeignets.focus(); return;
+      }
       if (incomplets().length) { erreur.textContent = "Il manque des accompagnements : choisissez-les sur la carte avant d'envoyer."; return; }
       erreur.textContent = "";
-      const { total, complet } = totalPanier();
+      const { total, complet, remise } = totalPanier();
       const lignes = lignesPanier().map((l) => `• ${l.nom} × ${l.q}${l.prix != null ? ` (${euros(l.prix * l.q)})` : ""}` +
         (l.details ? "\n" + l.details.map((d) => `   – ${d}`).join("\n") : ""));
       const message = [
         `Bonjour, je souhaite passer commande chez ${INFOS.nom} (n° ${numero}) :`,
         "",
         ...lignes,
+        remise ? `Remise précommande beignets (-${CAT_PRECO.remise.pourcent} %) : −${euros(remise)}` : "",
         complet ? `Total : ${euros(total)}` : "",
         "",
-        f.get("mode") === "Livraison" ? `Livraison : ${f.get("date")}` : `Retrait à ${INFOS.adresseRetrait} : ${f.get("date")}`,
+        avecAutres ? (f.get("mode") === "Livraison" ? `Livraison : ${f.get("date")}` : `Retrait à ${INFOS.adresseRetrait} : ${f.get("date")}`) : "",
+        avecBeignets ? `Beignets (précommande) : ${f.get("mode") === "Livraison" ? "livraison" : "retrait"} le ${texteDate(dateB)}` : "",
         f.get("mode") === "Livraison" ? `Adresse : ${f.get("adresse")}, ${f.get("ville")}` + (f.get("ville") === "Autre ville" ? " (hors zone : conditions à voir par téléphone)" : " (livraison gratuite)") : "",
         `Paiement : ${f.get("paiement")}`,
         `Nom : ${f.get("prenom")} ${f.get("nom")}`,
@@ -648,11 +687,13 @@
         if (l.ref.t === "formule") return { t: "formule", nom: l.nom, q: 1, prix: l.prix, details: l.details };
         const p = trouverPlat(l.ref.id), a = { t: "plat", cat: categorieDe[l.ref.id], nom: p.nom, q: l.q, prix: p.prix };
         if (l.ref.v) { if (p.choix.ajout) a.accomp = l.ref.v; else a.choix = l.ref.v; }
+        if (estPreco(l.ref.id)) a.date = dateB;
         return a;
       });
+      if (remise) articles.push({ t: "remise", nom: `Remise précommande beignets (-${CAT_PRECO.remise.pourcent} %)`, q: 1, prix: -remise });
       const optionDate = select.selectedOptions[0];
       envoyerAuService({ action: "commande", commande: {
-        id: numero, vendredi: f.get("date"), vendrediISO: optionDate ? optionDate.dataset.iso : "",
+        id: numero, vendredi: avecAutres ? f.get("date") : texteDate(dateB), vendrediISO: avecAutres ? (optionDate ? optionDate.dataset.iso : "") : dateB,
         prenom: f.get("prenom"), nom: f.get("nom"), email: f.get("email"), telephone: f.get("telephone"), mode: f.get("mode"),
         ville: f.get("mode") === "Livraison" ? f.get("ville") : "", adresse: f.get("mode") === "Livraison" ? f.get("adresse") : "",
         paiement: f.get("paiement"), remarque: f.get("remarque") || "", total, complet, articles,

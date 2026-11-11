@@ -47,6 +47,23 @@ const ACCOMPAGNEMENTS_AU_CHOIX = [
 
 const CARTE = [
   {
+    /* BEIGNETS DE HANOUKKA (précommande, date au choix)
+       - precommande.au : dernier jour possible pour le retrait / la livraison
+       - remise : -10 % sur les beignets pour toute commande passée jusqu'au 30 novembre inclus
+       Pour retirer les beignets du site après la fête : supprime ce bloc { ... } en entier. */
+    categorie: "Beignets de Hanoukka",
+    ancre: "hanoukka",
+    court: "Beignets Hanoukka",
+    note: "En précommande : choisissez le jour de retrait ou de livraison qui vous convient.",
+    affichage: "cartes",
+    precommande: { au: "2026-12-12" },
+    remise: { pourcent: 10, jusquau: "2026-11-30" },
+    plats: [
+      { id: "b10", nom: "Formule 10 beignets", description: "Production spéciale Rothenberg", prix: 25, photo: "images/plats/beignets.jpg", choix: { nom: "le parfum", liste: ["Sucre", "Confiture", "Chocolat", "Mix"] } },
+      { id: "b20", nom: "Formule 20 beignets", description: "Production spéciale Rothenberg", prix: 45, photo: "images/plats/beignets.jpg", choix: { nom: "le parfum", liste: ["Sucre", "Confiture", "Chocolat", "Mix"] } },
+    ],
+  },
+  {
     categorie: "Nos salades",
     ancre: "salades",
     court: "Salades",

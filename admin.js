@@ -137,6 +137,7 @@
     };
     const ACC = "Accompagnements des plats", INCLUS = "Inclus dans les formules", FORM = "Formules";
     liste.forEach((c) => (c.articles || []).forEach((a) => {
+      if (a.t === "remise") return;
       const q = Number(a.q) || 1;
       if (a.t === "formule") {
         ajouter(FORM, a.nom, q);
@@ -193,7 +194,9 @@
   /* ---------- Commandes une par une ---------- */
   function ligneArticle(a) {
     if (a.t === "formule") return `<li>${ech(a.nom)} × 1 <span style="float:right">${euros(a.prix)}</span>${(a.details || []).map((d) => `<small>– ${ech(d)}</small>`).join("")}</li>`;
-    const nom = a.accomp ? `${a.nom} + ${a.accomp}` : a.choix ? `${a.nom} (${String(a.choix).toLowerCase()})` : a.nom;
+    if (a.t === "remise") return `<li>${ech(a.nom)} <span style="float:right">${euros(a.prix)}</span></li>`;
+    const nom = (a.accomp ? `${a.nom} + ${a.accomp}` : a.choix ? `${a.nom} (${String(a.choix).toLowerCase()})` : a.nom)
+      + (a.date ? ` — le ${new Date(a.date + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}` : "");
     return `<li>${ech(nom)} × ${a.q}${a.prix != null ? ` <span style="float:right">${euros(a.prix * a.q)}</span>` : ""}</li>`;
   }
   function afficherCommandes() {
