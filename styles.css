@@ -381,3 +381,20 @@ input:user-invalid, textarea:user-invalid, select:user-invalid { border-color: #
 /* Bandeau de remise (beignets de Hanoukka) */
 .promo { margin: -4px 0 18px; padding: 12px 16px; border-radius: var(--rayon); background: var(--brun); color: var(--or-clair); font-size: .95rem; }
 .promo strong { color: #fff; }
+
+/* Horaires de Chabbat à côté du logo */
+.gauche-entete { display: flex; align-items: center; gap: 18px; min-width: 0; }
+.entete .marque img { flex-shrink: 0; }
+.nav a { white-space: nowrap; }
+.chabbat { display: flex; flex-direction: column; justify-content: center; padding: 5px 14px; border-left: 1px solid rgba(232,207,138,.45);
+  color: #f3e7c6; font-size: .78rem; line-height: 1.35; white-space: nowrap; }
+.chabbat .paracha { font-family: var(--serif); font-style: italic; font-size: 1rem; color: var(--or-clair); }
+.chabbat b { color: #fff; font-weight: 600; }
+@media (max-width: 600px) {
+  .gauche-entete { gap: 8px; }
+  .chabbat { padding: 2px 8px; font-size: .68rem; }
+  .chabbat .paracha { font-size: .82rem; }
+  .chabbat .long { display: none; }
+  .nav { gap: 12px; } .nav a { font-size: .82rem; }
+}
+@media (max-width: 380px) { .chabbat { padding: 2px 6px; font-size: .64rem; } .nav { gap: 10px; } .nav a { font-size: .78rem; } }

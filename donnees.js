@@ -23,6 +23,8 @@ const INFOS = {
   // Tirage au sort du mois : 1 point par tranche de « montantParPoint » € commandée.
   // « lot » = ce qui est affiché aux clients (tu peux aussi le changer dans l'admin avant chaque tirage).
   tirage: { actif: false, montantParPoint: 50, lot: "un dessert au choix" }, // false = désactivé : rien ne s'affiche
+  // Horaires de Chabbat affichés en haut à côté du logo (mis à jour automatiquement chaque semaine)
+  chabbat: { actif: true, latitude: 48.9553, longitude: 2.3092, minutesAvant: 18 },
   urlCommandes: "https://script.google.com/macros/s/AKfycbzNXvV4QLOjTemrmmzgJul-U94_T_7WPIJV8AP32VOJEYdacBJRRaMrGjzlllJ1z4JH/exec",
 };
 

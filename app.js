@@ -184,7 +184,7 @@
   }
   document.getElementById("entete").innerHTML = `
     <header class="entete"><span class="bsd" lang="he" dir="rtl">בס׳ד</span><div class="conteneur">
-      <a class="marque" href="index.html"><img src="images/logo.png" alt=""><span>${echapper(INFOS.nom)}</span></a>
+      <div class="gauche-entete"><a class="marque" href="index.html"><img src="images/logo.png" alt=""><span>${echapper(INFOS.nom)}</span></a><div class="chabbat" id="chabbat" hidden></div></div>
       <nav class="nav" aria-label="Navigation principale">
         ${lien("index.html", "Accueil", "accueil", 'class="cacher-mobile"')}
         ${lien("carte.html", "La carte", "carte")}
@@ -192,6 +192,52 @@
         ${estAdmin && page !== "admin" ? `<a href="admin.html" class="lien-admin">Admin</a>` : ""}
       </nav>
     </div></header>`;
+
+  /* ---------- Horaires de Chabbat et paracha de la semaine (à côté du logo) ----------
+     Source : Hebcal (gratuit), pour Épinay-sur-Seine. Entrée = X minutes avant le coucher du soleil,
+     sortie = apparition des étoiles. Si Hebcal ne répond pas, les horaires sont calculés sur place. */
+  (function chabbat() {
+    const C = INFOS.chabbat, zone = document.getElementById("chabbat");
+    if (!C || !C.actif || !zone || ["admin", "preparation"].includes(page)) return;
+    const hm = (d) => `${d.getHours()} h ${String(d.getMinutes()).padStart(2, "0")}`;
+    // Vendredi de la semaine (le samedi, on garde ce Chabbat jusqu'au soir)
+    const vendredi = new Date(); vendredi.setHours(12, 0, 0, 0);
+    vendredi.setDate(vendredi.getDate() + (vendredi.getDay() === 6 ? -1 : (5 - vendredi.getDay() + 7) % 7));
+    const samedi = new Date(vendredi); samedi.setDate(samedi.getDate() + 1);
+    const cle = "sarah-chabbat-" + isoJour(vendredi);
+    function afficher(d) {
+      zone.innerHTML = (d.paracha ? `<span class="paracha">Paracha ${echapper(d.paracha)}</span>` : `<span class="paracha">Chabbat Chalom</span>`) +
+        `<span>🕯️ <span class="long">Entrée ven. </span><b>${hm(new Date(d.entree))}</b> · ✨ <span class="long">Sortie sam. </span><b>${hm(new Date(d.sortie))}</b></span>`;
+      zone.title = "Horaires de Chabbat à Épinay-sur-Seine";
+      zone.hidden = false;
+    }
+    // Calcul local du coucher du soleil (angle sous l'horizon), en secours
+    function coucher(jour, angle) {
+      const debut = new Date(jour.getFullYear(), 0, 0), n = Math.floor((jour - debut) / 864e5);
+      const g = 2 * Math.PI / 365 * (n - 1 + 0.25);
+      const eq = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+      const dec = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+      const lat = C.latitude * Math.PI / 180, z = (90 + angle) * Math.PI / 180;
+      const ha = Math.acos(Math.cos(z) / (Math.cos(lat) * Math.cos(dec)) - Math.tan(lat) * Math.tan(dec)) * 180 / Math.PI;
+      const minutesUTC = 720 - 4 * (C.longitude - ha) - eq;
+      return new Date(Date.UTC(jour.getFullYear(), jour.getMonth(), jour.getDate(), 0, Math.round(minutesUTC)));
+    }
+    const secours = () => ({ entree: coucher(vendredi, 0.833).getTime() - C.minutesAvant * 60000, sortie: coucher(samedi, 8.5).getTime(), paracha: "" });
+    try { const m = JSON.parse(localStorage.getItem(cle)); if (m && m.paracha) { afficher(m); return; } } catch (e) { /* ignoré */ }
+    afficher(secours());
+    const url = `https://www.hebcal.com/shabbat?cfg=json&geo=pos&latitude=${C.latitude}&longitude=${C.longitude}&tzid=Europe/Paris&b=${C.minutesAvant}&M=on&lg=s` +
+      `&gy=${vendredi.getFullYear()}&gm=${vendredi.getMonth() + 1}&gd=${vendredi.getDate()}`;
+    fetch(url).then((r) => r.json()).then((j) => {
+      const items = j.items || [], bougies = items.find((x) => x.category === "candles"), havdala = items.find((x) => x.category === "havdalah");
+      const p = items.find((x) => x.category === "parashat");
+      const d = secours();
+      if (bougies && bougies.date) d.entree = new Date(bougies.date).getTime();
+      if (havdala && havdala.date) d.sortie = new Date(havdala.date).getTime();
+      if (p && p.title) d.paracha = p.title.replace(/^(Parashat|Parshat|Parasha|Parachat|Paracha)\s+/i, "");
+      afficher(d);
+      try { localStorage.setItem(cle, JSON.stringify(d)); } catch (e) { /* ignoré */ }
+    }).catch(() => { /* on garde le calcul local */ });
+  })();
 
   const reseaux = [
     `<li><a href="https://wa.me/${INFOS.whatsapp}" target="_blank" rel="noopener">WhatsApp : ${echapper(INFOS.telephoneAffiche)}</a></li>`,
