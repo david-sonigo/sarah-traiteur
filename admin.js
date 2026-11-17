@@ -225,11 +225,24 @@
             <button type="button" data-champ="statut" data-valeur="${c.statut === "Confirmée" ? "Nouvelle" : "Confirmée"}" aria-pressed="${c.statut === "Confirmée"}">✓ Confirmée</button>
             <button type="button" class="paye" data-champ="paye" data-valeur="${c.paye === "Oui" ? "Non" : "Oui"}" aria-pressed="${c.paye === "Oui"}">€ Payée</button>
             <button type="button" class="annule" data-champ="statut" data-valeur="${c.statut === "Annulée" ? "Nouvelle" : "Annulée"}" aria-pressed="${c.statut === "Annulée"}">Annulée</button>
+            <button type="button" class="supprimer" data-supprimer="${ech(c.id)}">🗑 Supprimer</button>
           </div>
         </article>`).join("")}</div>` : `<p class="message">Aucune commande pour cette date.</p>`}
       <p class="petit-texte" style="margin-top:12px">« Nouvelle » = enregistrée sur le site : vérifie que tu as bien reçu le message WhatsApp, puis clique sur « Confirmée ».</p>`;
   }
   $('[data-panneau="commandes"]').addEventListener("click", async (e) => {
+    const sup = e.target.closest("[data-supprimer]");
+    if (sup) {
+      const id = sup.dataset.supprimer, c = commandes.find((x) => x.id === id); if (!c) return;
+      if (!confirm(`Supprimer définitivement la commande de ${nomComplet(c)} (${euros(c.total)}) ?\n\nElle disparaîtra complètement : commandes, clients, chiffre d'affaires.`)) return;
+      sup.disabled = true; sup.textContent = "Suppression…";
+      try {
+        const r = await appel("supprimer", { id });
+        if (!r.ok) throw new Error(r.erreur);
+        commandes = commandes.filter((x) => x.id !== id); afficher();
+      } catch (err) { sup.disabled = false; sup.textContent = "🗑 Supprimer"; alert("La commande n'a pas pu être supprimée. Réessaie."); }
+      return;
+    }
     const b = e.target.closest("[data-champ]"); if (!b) return;
     const id = b.closest("[data-id]").dataset.id, { champ, valeur } = b.dataset;
     const c = commandes.find((x) => x.id === id); if (!c) return;
