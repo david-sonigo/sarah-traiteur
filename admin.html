@@ -79,13 +79,37 @@
     .gagnant .nom-gagnant { font-family: var(--serif); font-size: clamp(2rem, 6vw, 3rem); color: var(--or-clair); line-height: 1.1; margin: 6px 0; }
     .gagnant .actions-gagnant { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
     .gagnant.roule .nom-gagnant { opacity: .75; }
+    .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 100; background: #2f6b3a; color: #fff; padding: 12px 20px; border-radius: 999px; box-shadow: 0 8px 24px rgba(0,0,0,.25); font-size: .92rem; }
+    .toast.erreur { background: #8a2e22; }
+    .ouvert-ferme { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+    .etat-cmd { font-weight: 600; padding: 6px 14px; border-radius: 999px; }
+    .etat-cmd.ouvert { background: #dcefdc; color: #2f6b3a; } .etat-cmd.ferme { background: #f6dcd6; color: #8a2e22; }
+    .ed-cat { margin-top: 18px; }
+    .ed-plat { display: grid; grid-template-columns: 64px minmax(0, 2fr) minmax(0, 1fr) 96px auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px dashed var(--creme-2); }
+    .ed-plat.masque { opacity: .5; }
+    .ed-plat input[type="text"], .ed-plat input[type="number"], .ed-txt { font: inherit; font-size: .9rem; padding: 8px 10px; border: 1px solid #dccdb4; border-radius: 8px; background: var(--blanc); width: 100%; min-width: 0; }
+    .ed-plat .desc { grid-column: 2 / 5; }
+    .ed-photo { width: 64px; height: 64px; border-radius: 10px; background: var(--creme-2) center/cover no-repeat; border: 1px solid #dccdb4; cursor: pointer; position: relative; display: grid; place-items: center; font-size: .7rem; color: var(--texte-doux); text-align: center; }
+    .ed-photo input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .ed-actions { display: flex; flex-direction: column; gap: 6px; font-size: .82rem; }
+    .ed-actions label { display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+    .ed-modifie { box-shadow: inset 3px 0 0 var(--or); padding-left: 8px; }
+    .barre-sauver { position: sticky; bottom: 0; z-index: 30; background: var(--creme); border-top: 1px solid var(--creme-2); padding: 12px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+    @media (max-width: 640px) {
+      .ed-plat { grid-template-columns: 56px minmax(0, 1fr) 80px; }
+      .ed-plat .unite-champ { grid-column: 2 / 3; } .ed-plat .desc { grid-column: 2 / 4; } .ed-actions { grid-column: 2 / 4; flex-direction: row; flex-wrap: wrap; }
+      .ed-photo { width: 56px; height: 56px; }
+      .barre-sauver { flex-wrap: nowrap; padding: 8px 0; gap: 8px; }
+      .barre-sauver .bouton { padding: 10px 14px; font-size: .74rem; white-space: nowrap; }
+      #info-sauver { display: none; }
+    }
     .message { color: var(--texte-doux); font-style: italic; }
     .erreur-admin { color: #8a2e22; font-weight: 500; }
     .petit-texte { font-size: .85rem; color: var(--texte-doux); }
     @media print {
       #entete, #pied, .outils, .onglets, .etats, .ne-pas-imprimer, .commander-flottant { display: none !important; }
       [data-panneau] { display: block !important; }
-      [data-panneau="visites"], [data-panneau="ca"], [data-panneau="clients"], [data-panneau="tirage"] { display: none !important; }
+      [data-panneau="visites"], [data-panneau="ca"], [data-panneau="clients"], [data-panneau="tirage"], [data-panneau="carte"] { display: none !important; }
       body { background: #fff; }
       .bloc, .cmd { border-color: #999; }
       .chiffres-admin div { background: #fff; color: #000; border: 1px solid #999; }
@@ -128,6 +152,7 @@
         <button type="button" role="tab" data-onglet="cuisine" aria-selected="false">À préparer</button>
         <button type="button" role="tab" data-onglet="commandes" aria-selected="false">Commandes</button>
         <button type="button" role="tab" data-onglet="clients" aria-selected="false">Clients</button>
+        <button type="button" role="tab" data-onglet="carte" aria-selected="false">✏️ Carte & prix</button>
         <button type="button" role="tab" data-onglet="tirage" aria-selected="false">🎁 Tirage au sort</button>
         <button type="button" role="tab" data-onglet="ca" aria-selected="false">Chiffre d'affaires</button>
         <button type="button" role="tab" data-onglet="visites" aria-selected="false">Statistiques</button>
@@ -137,6 +162,7 @@
       <section data-panneau="cuisine" style="padding:24px 0 0" hidden></section>
       <section data-panneau="commandes" style="padding:24px 0 0" hidden></section>
       <section data-panneau="clients" style="padding:24px 0 0" hidden></section>
+      <section data-panneau="carte" style="padding:24px 0 0" hidden></section>
       <section data-panneau="tirage" style="padding:24px 0 0" hidden></section>
       <section data-panneau="ca" style="padding:24px 0 0" hidden></section>
       <section data-panneau="visites" style="padding:24px 0 0" hidden></section>
@@ -145,6 +171,7 @@
 
   <div id="pied"></div>
   <script src="donnees.js"></script>
+  <script src="reglages.js"></script>
   <script src="app.js"></script>
   <script src="admin.js"></script>
 </body>

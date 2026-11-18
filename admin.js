@@ -32,6 +32,7 @@
         throw new Error(r.erreur);
       }
       commandes = r.commandes || []; visites = r.visites || []; tirages = r.tirages || [];
+      if (!brouillonModifie) { reglages = r.reglages || {}; brouillon = JSON.parse(JSON.stringify(reglages)); }
       if (r.tableur) { $("#lien-tableur").href = r.tableur; $("#lien-tableur").hidden = false; }
       $("#connexion").hidden = true; $("#espace").hidden = false;
       try { sessionStorage.setItem("sarah-admin-session", "1"); } catch (e) { /* ignoré */ }
@@ -96,7 +97,7 @@
   const actives = (liste) => liste.filter((c) => c.statut !== "Annulée");
 
   function afficher() {
-    afficherResume(); afficherCuisine(); afficherCommandes(); afficherCA(); afficherClients(); afficherTirage(); afficherVisites();
+    afficherResume(); afficherCuisine(); afficherCommandes(); afficherCA(); afficherClients(); afficherTirage(); afficherCarteAdmin(); afficherVisites();
   }
 
   /* ---------- Résumé ---------- */
@@ -247,7 +248,10 @@
     const id = b.closest("[data-id]").dataset.id, { champ, valeur } = b.dataset;
     const c = commandes.find((x) => x.id === id); if (!c) return;
     const avant = c[champ]; c[champ] = valeur; afficher();
-    try { const r = await appel("maj", { id, champ, valeur }); if (!r.ok) throw new Error(r.erreur); }
+    try {
+      const r = await appel("maj", { id, champ, valeur }); if (!r.ok) throw new Error(r.erreur);
+      if (champ === "statut" && valeur === "Confirmée") toast(r.mail ? `✉️ E-mail de confirmation envoyé à ${c.prenom || "au client"}` : "Commande confirmée (pas d'e-mail valide pour ce client)", !r.mail);
+    }
     catch (err) { c[champ] = avant; afficher(); alert("La modification n'a pas pu être enregistrée. Réessaie."); }
   });
 
@@ -337,6 +341,130 @@
     a.download = `clients-sarah-traiteur-${aujourdHui()}.csv`;
     document.body.appendChild(a); a.click(); a.remove();
   }
+
+  /* ---------- Petit message en bas de l'écran ---------- */
+  function toast(texte, erreur) {
+    const t = document.createElement("div"); t.className = "toast" + (erreur ? " erreur" : ""); t.textContent = texte; t.setAttribute("role", "status");
+    document.body.appendChild(t); setTimeout(() => t.remove(), 4000);
+  }
+
+  /* ---------- Carte & prix : modifier les plats, les prix, les photos, fermer les commandes ---------- */
+  let reglages = {}, brouillon = {}, brouillonModifie = false;
+  const ORIGINE = typeof CARTE_ORIGINE !== "undefined" ? CARTE_ORIGINE : CARTE;
+  const modif = (id) => ((brouillon.plats = brouillon.plats || {})[id] = brouillon.plats[id] || {});
+  const marquer = () => { brouillonModifie = true; const b = $("#sauver-carte"); if (b) b.disabled = false; const i = $("#info-sauver"); if (i) i.textContent = "Modifications non enregistrées"; };
+  function valeur(p, k) { const m = (brouillon.plats || {})[p.id] || {}; return m[k] !== undefined ? m[k] : p[k]; }
+  function lignePlat(p, nouveau) {
+    const photo = valeur(p, "photo") || `images/plats/${p.nom.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/œ/g, "oe").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}.jpg`;
+    const m = (brouillon.plats || {})[p.id] || {}, masque = !!m.masque, change = Object.keys(m).length > 0;
+    return `<div class="ed-plat ${masque ? "masque" : ""} ${change ? "ed-modifie" : ""}" data-plat="${ech(p.id)}" ${nouveau ? 'data-nouveau="1"' : ""}>
+      <label class="ed-photo" style="background-image:url('${ech(encodeURI(photo))}')" title="Changer la photo">📷<input type="file" accept="image/*" data-photo="${ech(p.id)}"></label>
+      <input type="text" data-champ="nom" value="${ech(valeur(p, "nom"))}" aria-label="Nom du plat">
+      <input type="text" class="unite-champ" data-champ="unite" value="${ech(valeur(p, "unite") || "")}" placeholder="Taille (ex. 2 pers.)" aria-label="Taille">
+      <input type="number" data-champ="prix" min="0" step="0.5" value="${valeur(p, "prix") == null ? "" : valeur(p, "prix")}" aria-label="Prix en euros">
+      <div class="ed-actions">
+        <label><input type="checkbox" data-masque ${masque ? "" : "checked"}> Visible</label>
+        ${nouveau ? `<button type="button" class="bouton petit secondaire" data-retirer-nouveau>Supprimer</button>` : change ? `<button type="button" class="bouton petit secondaire" data-annuler-plat>Remettre</button>` : ""}
+      </div>
+      <input type="text" class="desc" data-champ="description" value="${ech(valeur(p, "description") || "")}" placeholder="Petite description (facultatif)" aria-label="Description">
+    </div>`;
+  }
+  function afficherCarteAdmin() {
+    const zone = $('[data-panneau="carte"]'); if (!zone) return;
+    const ferme = brouillon.fermeture || {}, nouveaux = brouillon.nouveaux || [];
+    zone.innerHTML = `
+      <h2>Carte & prix</h2>
+      <div class="bloc">
+        <h3>Commandes</h3>
+        <div class="ouvert-ferme">
+          <span class="etat-cmd ${ferme.fermee ? "ferme" : "ouvert"}">${ferme.fermee ? "🔒 Commandes fermées" : "✅ Commandes ouvertes"}</span>
+          <button type="button" class="bouton petit ${ferme.fermee ? "" : "secondaire"}" id="basculer-fermeture">${ferme.fermee ? "Rouvrir les commandes" : "Fermer les commandes"}</button>
+        </div>
+        <label class="petit-texte" for="message-fermeture" style="display:block;margin-top:12px">Message affiché aux clients quand c'est fermé (facultatif)</label>
+        <input id="message-fermeture" class="ed-txt" type="text" value="${ech(ferme.message || "")}" placeholder="Ex. Fermé pour les vacances, réouverture le 5 janvier">
+      </div>
+      <p class="petit-texte" style="margin-top:14px">Change ce que tu veux, puis clique sur <strong>Enregistrer</strong>. 📷 = changer la photo · décocher « Visible » = cacher le plat (rupture). Les clients voient les changements en quelques minutes.</p>
+      ${ORIGINE.map((cat) => `
+        <div class="bloc ed-cat"><h3>${ech(cat.categorie)}</h3>
+          ${cat.plats.map((p) => lignePlat(p, false)).join("")}
+          ${nouveaux.filter((n) => n.cat === cat.ancre).map((n) => lignePlat(n, true)).join("")}
+          <button type="button" class="bouton petit secondaire" data-ajouter-plat="${ech(cat.ancre)}" style="margin-top:10px">+ Ajouter un plat</button>
+        </div>`).join("")}
+      <div class="barre-sauver">
+        <button type="button" class="bouton" id="sauver-carte" ${brouillonModifie ? "" : "disabled"}>Enregistrer</button>
+        <button type="button" class="bouton secondaire" id="annuler-carte">Annuler les changements</button>
+        <span class="petit-texte" id="info-sauver">${brouillonModifie ? "Modifications non enregistrées" : ""}</span>
+      </div>`;
+  }
+  function trouverNouveau(id) { return (brouillon.nouveaux || []).find((n) => n.id === id); }
+  const zoneCarte = $('[data-panneau="carte"]');
+  zoneCarte.addEventListener("input", (e) => {
+    const champ = e.target.dataset.champ, ligne = e.target.closest("[data-plat]");
+    if (e.target.id === "message-fermeture") { (brouillon.fermeture = brouillon.fermeture || {}).message = e.target.value; marquer(); return; }
+    if (!champ || !ligne) return;
+    let v = e.target.value; if (champ === "prix") v = v === "" ? null : Math.max(0, Number(v));
+    const nv = trouverNouveau(ligne.dataset.plat);
+    if (nv) nv[champ] = v; else modif(ligne.dataset.plat)[champ] = v;
+    ligne.classList.add("ed-modifie"); marquer();
+  });
+  zoneCarte.addEventListener("change", async (e) => {
+    const ligne = e.target.closest("[data-plat]");
+    if (e.target.matches("[data-masque]") && ligne) {
+      const nv = trouverNouveau(ligne.dataset.plat), cible = nv || modif(ligne.dataset.plat);
+      if (e.target.checked) delete cible.masque; else cible.masque = true;
+      ligne.classList.toggle("masque", !e.target.checked); marquer(); return;
+    }
+    if (e.target.matches("[data-photo]") && e.target.files[0]) {
+      const id = e.target.dataset.photo, cadre = e.target.closest(".ed-photo");
+      cadre.firstChild.textContent = "⏳";
+      try {
+        const data = await reduirePhoto(e.target.files[0]);
+        const r = await appel("photo", { nom: id, data });
+        if (!r.ok) throw new Error(r.erreur);
+        const nv = trouverNouveau(id); if (nv) nv.photo = r.url; else modif(id).photo = r.url;
+        cadre.style.backgroundImage = `url('${r.url}')`; cadre.firstChild.textContent = "📷";
+        ligne.classList.add("ed-modifie"); marquer(); toast("Photo envoyée : clique sur « Enregistrer » pour la mettre sur le site");
+      } catch (err) { cadre.firstChild.textContent = "📷"; toast("La photo n'a pas pu être envoyée. Réessaie.", true); }
+    }
+  });
+  zoneCarte.addEventListener("click", async (e) => {
+    if (e.target.id === "basculer-fermeture") {
+      const f = (brouillon.fermeture = brouillon.fermeture || {}); f.fermee = !f.fermee; marquer(); afficherCarteAdmin(); return;
+    }
+    const aj = e.target.closest("[data-ajouter-plat]");
+    if (aj) { (brouillon.nouveaux = brouillon.nouveaux || []).push({ id: "n" + Date.now().toString(36), cat: aj.dataset.ajouterPlat, nom: "Nouveau plat", prix: null, unite: "", description: "" }); marquer(); afficherCarteAdmin(); return; }
+    const ligne = e.target.closest("[data-plat]");
+    if (e.target.matches("[data-retirer-nouveau]") && ligne) { brouillon.nouveaux = (brouillon.nouveaux || []).filter((n) => n.id !== ligne.dataset.plat); marquer(); afficherCarteAdmin(); return; }
+    if (e.target.matches("[data-annuler-plat]") && ligne) { delete (brouillon.plats || {})[ligne.dataset.plat]; marquer(); afficherCarteAdmin(); return; }
+    if (e.target.id === "annuler-carte") { brouillon = JSON.parse(JSON.stringify(reglages)); brouillonModifie = false; afficherCarteAdmin(); return; }
+    if (e.target.id === "sauver-carte") {
+      const b = e.target; b.disabled = true; b.textContent = "Enregistrement…";
+      // On nettoie : un plat sans changement n'est pas gardé
+      Object.keys(brouillon.plats || {}).forEach((id) => { if (!Object.keys(brouillon.plats[id]).length) delete brouillon.plats[id]; });
+      (brouillon.nouveaux || []).forEach((n) => { if (n.prix == null || isNaN(n.prix)) n.prix = null; });
+      try {
+        const r = await appel("reglages", { reglages: brouillon });
+        if (!r.ok) throw new Error(r.erreur);
+        reglages = JSON.parse(JSON.stringify(brouillon)); brouillonModifie = false;
+        try { localStorage.setItem("sarah-reglages", JSON.stringify({ t: Date.now(), r: reglages })); } catch (err) { /* ignoré */ }
+        afficherCarteAdmin(); toast("✅ Enregistré : le site est à jour");
+      } catch (err) { b.disabled = false; b.textContent = "Enregistrer"; toast("L'enregistrement n'a pas marché. Réessaie.", true); }
+    }
+  });
+  // Photo réduite (900 px maximum) avant l'envoi, pour aller vite
+  function reduirePhoto(fichier) {
+    return new Promise((ok, ko) => {
+      const img = new Image(), url = URL.createObjectURL(fichier);
+      img.onload = () => {
+        const max = 900, k = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+        ok(c.toDataURL("image/jpeg", 0.82).split(",")[1]);
+      };
+      img.onerror = ko; img.src = url;
+    });
+  }
+  window.addEventListener("beforeunload", (e) => { if (brouillonModifie) { e.preventDefault(); e.returnValue = ""; } });
 
   /* ---------- Tirage au sort du mois ---------- */
   const TIRAGE = INFOS.tirage || { montantParPoint: 50, lot: "un dessert au choix" };
@@ -553,7 +681,9 @@
   }
 
   /* ---------- Données d'exemple (admin.html?demo) pour voir la page sans le Google Sheets ---------- */
-  function donneesDemo(action) {
+  function donneesDemo(action, extra) {
+    if (action === "photo") return { ok: true, url: "data:image/jpeg;base64," + extra.data };
+    if (action === "maj") return { ok: true, mail: true };
     if (action !== "lister") return { ok: true };
     const v = new Date(); v.setDate(v.getDate() + ((5 - v.getDay() + 7) % 7 || 7));
     const vISO = `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, "0")}-${String(v.getDate()).padStart(2, "0")}`;

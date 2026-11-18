@@ -1,7 +1,7 @@
 /* Fonctionnement du site — normalement, pas besoin de modifier ce fichier.
    Les textes, plats et prix se changent dans donnees.js */
 
-(function () {
+function demarrerSite() {
   const euros = (n) => n.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
   const echapper = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const tousLesPlats = CARTE.flatMap((c) => c.plats.map((p) => ({
@@ -272,6 +272,12 @@
         <span>${T ? `<a href="reglement-tirage.html">Règlement du tirage au sort</a> · ` : ""}<a href="mentions-legales.html">Mentions légales</a></span>
       </div>
     </div></footer>`;
+
+  /* Commandes fermées (réglage de l'admin) : bandeau + boutons d'ajout cachés */
+  if (INFOS.fermeture && !["admin", "preparation"].includes(page)) {
+    document.body.classList.add("commandes-fermees");
+    document.getElementById("entete").insertAdjacentHTML("afterend", `<div class="fermeture" role="status">🔒 <strong>Les commandes sont fermées pour le moment.</strong>${INFOS.fermeture.message ? `<br>${echapper(INFOS.fermeture.message)}` : ""}</div>`);
+  }
 
   function majBadge() {
     const b = document.getElementById("badge");
@@ -701,6 +707,7 @@
       e.preventDefault();
       const erreur = document.getElementById("erreur");
       const f = new FormData(e.target);
+      if (INFOS.fermeture) { erreur.textContent = "Les commandes sont fermées pour le moment."; return; }
       if (!nbArticles()) { erreur.textContent = "Ajoutez au moins un plat depuis la carte."; return; }
       const avecBeignets = aBeignets(), avecAutres = aAutres() || !avecBeignets;
       if (avecAutres && !vendredis.length) { erreur.textContent = "Aucune date disponible pour le moment."; return; }
@@ -753,4 +760,5 @@
   }
 
   majBadge();
-})();
+}
+chargerReglages(demarrerSite);

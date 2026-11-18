@@ -398,3 +398,9 @@ input:user-invalid, textarea:user-invalid, select:user-invalid { border-color: #
   .nav { gap: 12px; } .nav a { font-size: .82rem; }
 }
 @media (max-width: 380px) { .chabbat { padding: 2px 6px; font-size: .64rem; } .nav { gap: 10px; } .nav a { font-size: .78rem; } }
+
+/* Commandes fermées (réglage de l'admin) */
+.fermeture { background: #8a2e22; color: #fff; text-align: center; padding: 14px 16px; font-size: .95rem; line-height: 1.5; }
+.commandes-fermees .compteur, .commandes-fermees .selections, .commandes-fermees [data-f-ajouter],
+.commandes-fermees .barre-panier, .commandes-fermees .recommander, .commandes-fermees .commander-flottant,
+.commandes-fermees #formulaire button[type="submit"] { display: none !important; }
